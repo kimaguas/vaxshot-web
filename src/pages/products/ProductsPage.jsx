@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
+import Pagination from "../../components/ui/Pagination";
 
 // Product Form Modal
 const ProductModal = ({ product, onClose, onSave }) => {
@@ -181,13 +182,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [page, setPage] = useState(1);
 
   // Fetch products
   const { data, isLoading } = useQuery({
-    queryKey: ["products", search],
+    queryKey: ["products", search, page],
     queryFn: async () => {
       const response = await api.get("/products", {
-        params: { search },
+        params: { search, page },
       });
       return response.data;
     },
@@ -257,6 +259,7 @@ export default function ProductsPage() {
   };
 
   const products = data?.products || [];
+  const pagination = data?.pagination || null;
 
   return (
     <div className="space-y-6">
@@ -397,6 +400,7 @@ export default function ProductsPage() {
             )}
           </tbody>
         </table>
+        <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 
       {/* Modal */}

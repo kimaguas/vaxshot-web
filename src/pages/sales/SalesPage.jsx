@@ -12,6 +12,8 @@ import {
   CreditCard,
 } from "lucide-react";
 
+import Pagination from "../../components/ui/Pagination";
+
 const StatusBadge = ({ status }) => {
   const colors = {
     draft: "bg-gray-100 text-gray-600",
@@ -576,11 +578,12 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
+  const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["sales", search],
+    queryKey: ["sales", search, page],
     queryFn: async () => {
-      const response = await api.get("/sales", { params: { search } });
+      const response = await api.get("/sales", { params: { search, page } });
       return response.data;
     },
   });
@@ -641,6 +644,7 @@ export default function SalesPage() {
   };
 
   const sales = data?.sales || [];
+  const pagination = data?.pagination || null;
 
   return (
     <div className="space-y-6">
@@ -762,6 +766,7 @@ export default function SalesPage() {
             )}
           </tbody>
         </table>
+        <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 
       {/* Modals */}

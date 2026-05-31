@@ -4,6 +4,7 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Edit, Trash2, UserCog } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import Pagination from "../../components/ui/Pagination";
 
 const roleColors = {
   admin: "bg-purple-100 text-purple-700",
@@ -158,11 +159,12 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["users", search],
+    queryKey: ["users", search, page],
     queryFn: async () => {
-      const response = await api.get("/users", { params: { search } });
+      const response = await api.get("/users", { params: { search, page } });
       return response.data;
     },
   });
@@ -209,6 +211,7 @@ export default function UsersPage() {
   };
 
   const users = data?.users || [];
+  const pagination = data?.pagination || null;
 
   return (
     <div className="space-y-6">
@@ -339,6 +342,7 @@ export default function UsersPage() {
             )}
           </tbody>
         </table>
+        <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 
       {showModal && (

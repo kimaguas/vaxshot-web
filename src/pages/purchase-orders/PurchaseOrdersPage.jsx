@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Eye, ClipboardList, CheckCircle } from "lucide-react";
+import Pagination from "../../components/ui/Pagination";
 
 // Status Badge Component
 const StatusBadge = ({ status }) => {
@@ -518,12 +519,13 @@ export default function PurchaseOrdersPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
+  const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["purchase-orders", search],
+    queryKey: ["purchase-orders", search, page],
     queryFn: async () => {
       const response = await api.get("/purchase-orders", {
-        params: { search },
+        params: { search, page },
       });
       return response.data;
     },
@@ -565,6 +567,7 @@ export default function PurchaseOrdersPage() {
   });
 
   const orders = data?.purchase_orders || [];
+  const pagination = data?.pagination || null;
 
   return (
     <div className="space-y-6">
@@ -674,6 +677,7 @@ export default function PurchaseOrdersPage() {
             )}
           </tbody>
         </table>
+        <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 
       {/* Modals */}
