@@ -7,7 +7,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ login: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,7 +17,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await login(form.email, form.password);
+      await login(form.login, form.password);
       toast.success("Welcome back!");
       navigate("/");
     } catch (err) {
@@ -50,13 +50,13 @@ export default function LoginPage() {
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
+              Username or Email
             </label>
             <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="admin@vaxshot.com"
+              type="text"
+              value={form.login}
+              onChange={(e) => setForm({ ...form, login: e.target.value })}
+              placeholder="Enter username or email"
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />

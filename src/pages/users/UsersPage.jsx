@@ -16,6 +16,7 @@ const roleColors = {
 const UserModal = ({ user, onClose, onSave }) => {
   const [form, setForm] = useState({
     name: user?.name || "",
+    username: user?.username || "",
     email: user?.email || "",
     password: "",
     password_confirmation: "",
@@ -50,6 +51,20 @@ const UserModal = ({ user, onClose, onSave }) => {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username *
+            </label>
+            <input
+              type="text"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              required
+              placeholder="e.g. jdelacruz"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -251,6 +266,9 @@ export default function UsersPage() {
                 Name
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
+                Username
+              </th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Email
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
@@ -298,6 +316,9 @@ export default function UsersPage() {
                         )}
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700">
+                    @{user.username || "-"}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {user.email}
