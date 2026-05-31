@@ -113,7 +113,10 @@ export default function Sidebar() {
             <p className="text-sm font-medium text-white truncate">
               {user?.name}
             </p>
-            <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+            <p className="text-xs text-gray-400">
+              @{user?.username} ·{" "}
+              <span className="capitalize">{user?.role}</span>
+            </p>
           </div>
         </div>
       </div>
