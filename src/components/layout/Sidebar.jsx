@@ -61,6 +61,12 @@ const navItems = [
     icon: UserCog,
     roles: ["admin"],
   },
+  {
+    label: "Activity Logs",
+    path: "/activity-logs",
+    icon: ClipboardList,
+    roles: ["admin"],
+  },
 ];
 
 export default function Sidebar() {

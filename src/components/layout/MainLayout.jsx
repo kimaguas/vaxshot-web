@@ -11,6 +11,7 @@ const pageTitles = {
   "/sales": "Sales",
   "/reports": "Reports",
   "/users": "Users",
+  "/activity-logs": "Activity Logs",
 };
 
 export default function MainLayout() {

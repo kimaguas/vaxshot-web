@@ -31,6 +31,8 @@ import ReportsPage from "./pages/reports/ReportsPage";
 // Users
 import UsersPage from "./pages/users/UsersPage";
 
+import ActivityLogsPage from "./pages/activity-logs/ActivityLogsPage";
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { token, loading } = useAuth();
@@ -99,6 +101,7 @@ export default function App() {
         <Route path="sales" element={<SalesPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="activity-logs" element={<ActivityLogsPage />} />
       </Route>
 
       {/* Catch all */}

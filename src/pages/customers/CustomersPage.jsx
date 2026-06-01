@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { provinces, citiesMunicipalities } from "ph-locations";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -17,6 +18,56 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
     status: customer?.status || "active",
   });
 
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [filteredCities, setFilteredCities] = useState([]);
+
+  // Load initial values if editing
+  useEffect(() => {
+    if (customer?.province) {
+      const province = provinces.find((p) => p.name === customer.province);
+      if (province) {
+        setSelectedProvince(province.code);
+        const citiesInProvince = citiesMunicipalities.filter(
+          (c) => c.province === province.code,
+        );
+        setFilteredCities(citiesInProvince);
+        if (customer?.city) {
+          setSelectedCity(customer.city);
+        }
+      }
+    }
+  }, [customer]);
+
+  const handleProvinceChange = (e) => {
+    const provCode = e.target.value;
+    const province = provinces.find((p) => p.code === provCode);
+    setSelectedProvince(provCode);
+    setSelectedCity("");
+    setFilteredCities([]);
+    setForm({
+      ...form,
+      province: province?.name || "",
+      city: "",
+      barangay: "",
+    });
+    if (provCode) {
+      setFilteredCities(
+        citiesMunicipalities.filter((c) => c.province === provCode),
+      );
+    }
+  };
+
+  const handleCityChange = (e) => {
+    const cityName = e.target.value;
+    setSelectedCity(cityName);
+    setForm({
+      ...form,
+      city: cityName,
+      barangay: "",
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(form);
@@ -32,63 +83,93 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name *
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address
+            </label>
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              placeholder="House/Unit No., Street"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Province */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Province
+            </label>
+            <select
+              value={selectedProvince}
+              onChange={handleProvinceChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Province</option>
+              {provinces
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* City/Municipality */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              City / Municipality
+            </label>
+            <select
+              value={selectedCity}
+              onChange={handleCityChange}
+              disabled={!selectedProvince}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="">Select City/Municipality</option>
+              {filteredCities
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* Barangay */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Barangay
+            </label>
+            <input
+              type="text"
+              value={form.barangay}
+              onChange={(e) => setForm({ ...form, barangay: e.target.value })}
+              placeholder="Enter barangay"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name *
-              </label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
-              </label>
-              <input
-                type="text"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Barangay
-              </label>
-              <input
-                type="text"
-                value={form.barangay}
-                onChange={(e) => setForm({ ...form, barangay: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City
-              </label>
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Province
-              </label>
-              <input
-                type="text"
-                value={form.province}
-                onChange={(e) => setForm({ ...form, province: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {/* Contact No */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact No
@@ -102,6 +183,8 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {/* Specialization */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Specialization
@@ -115,32 +198,34 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
 
           <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               {customer ? "Update" : "Create"}
             </button>

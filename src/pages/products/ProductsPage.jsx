@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -15,7 +15,18 @@ const ProductModal = ({ product, onClose, onSave }) => {
     selling_price: product?.selling_price || "",
     stock: product?.stock || 0,
     maintaining_stock: product?.maintaining_stock || 0,
+    supplier_id: product?.supplier_id || "",
     status: product?.status || "active",
+  });
+
+  const { data: suppliersData } = useQuery({
+    queryKey: ["suppliers-dropdown"],
+    queryFn: async () => {
+      const response = await api.get("/suppliers", {
+        params: { status: "active" },
+      });
+      return response.data;
+    },
   });
 
   const handleSubmit = (e) => {
@@ -25,7 +36,7 @@ const ProductModal = ({ product, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">
             {product ? "Edit Product" : "Add New Product"}
@@ -64,6 +75,28 @@ const ProductModal = ({ product, onClose, onSave }) => {
             </div>
           </div>
 
+          {/* Supplier */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Supplier
+            </label>
+            <select
+              value={form.supplier_id}
+              onChange={(e) =>
+                setForm({ ...form, supplier_id: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Supplier</option>
+              {suppliersData?.suppliers?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.company}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description
@@ -142,6 +175,7 @@ const ProductModal = ({ product, onClose, onSave }) => {
             </div>
           </div>
 
+          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -183,13 +217,26 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [sortField, setSortField] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   // Fetch products
+  const { data: suppliersData } = useQuery({
+    queryKey: ["suppliers-filter"],
+    queryFn: async () => {
+      const response = await api.get("/suppliers", {
+        params: { status: "active" },
+      });
+      return response.data;
+    },
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ["products", search, page],
+    queryKey: ["products", search, page, supplierFilter, sortField, sortOrder],
     queryFn: async () => {
       const response = await api.get("/products", {
-        params: { search, page },
+        params: { search, page, supplier_id: supplierFilter },
       });
       return response.data;
     },
@@ -261,23 +308,98 @@ export default function ProductsPage() {
   const products = data?.products || [];
   const pagination = data?.pagination || null;
 
+  // Sort products client-side
+  const sortedProducts = [...products].sort((a, b) => {
+    if (sortField === "stock") {
+      return sortOrder === "asc" ? a.stock - b.stock : b.stock - a.stock;
+    }
+    if (sortField === "brand_name") {
+      return sortOrder === "asc"
+        ? a.brand_name.localeCompare(b.brand_name)
+        : b.brand_name.localeCompare(a.brand_name);
+    }
+    if (sortField === "selling_price") {
+      return sortOrder === "asc"
+        ? a.selling_price - b.selling_price
+        : b.selling_price - a.selling_price;
+    }
+    return 0;
+  });
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const SortIcon = ({ field }) => {
+    if (sortField !== field)
+      return <span className="text-gray-300 ml-1">↕</span>;
+    return (
+      <span className="text-blue-600 ml-1">
+        {sortOrder === "asc" ? "↑" : "↓"}
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-          />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            />
+          </div>
+
+          {/* Supplier Filter */}
+          <select
+            value={supplierFilter}
+            onChange={(e) => {
+              setSupplierFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          >
+            <option value="">All Suppliers</option>
+            {suppliersData?.suppliers?.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.company}
+              </option>
+            ))}
+          </select>
+
+          {/* Clear Filters */}
+          {(search || supplierFilter) && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setSupplierFilter("");
+                setPage(1);
+              }}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
+
         <button
           onClick={handleAdd}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -295,17 +417,29 @@ export default function ProductsPage() {
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Product Code
               </th>
+              <th
+                className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
+                onClick={() => handleSort("brand_name")}
+              >
+                Brand Name <SortIcon field="brand_name" />
+              </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Brand Name
+                Supplier
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Acquisition Cost
               </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Selling Price
+              <th
+                className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
+                onClick={() => handleSort("selling_price")}
+              >
+                Selling Price <SortIcon field="selling_price" />
               </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Stock
+              <th
+                className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
+                onClick={() => handleSort("stock")}
+              >
+                Stock <SortIcon field="stock" />
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Status
@@ -330,7 +464,7 @@ export default function ProductsPage() {
                 </td>
               </tr>
             ) : (
-              products.map((product) => (
+              sortedProducts.map((product) => (
                 <tr
                   key={product.id}
                   className="hover:bg-gray-50 transition-colors"
@@ -347,6 +481,9 @@ export default function ProductsPage() {
                         {product.description}
                       </p>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {product.supplier || "-"}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     ₱{Number(product.acquisition_cost).toLocaleString()}
