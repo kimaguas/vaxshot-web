@@ -30,10 +30,21 @@ const modules = [
 export default function ActivityLogsPage() {
   const [search, setSearch] = useState("");
   const [module, setModule] = useState("");
+  const [userName, setUserName] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [params, setParams] = useState({});
+
+  const { data: usersData } = useQuery({
+    queryKey: ["users-list"],
+    queryFn: async () => {
+      const response = await api.get("/users/list");
+      return response.data;
+    },
+  });
+
+  const usersList = usersData?.users || [];
 
   const { data, isLoading } = useQuery({
     queryKey: ["activity-logs", params, page],
@@ -50,6 +61,7 @@ export default function ActivityLogsPage() {
     setParams({
       search: search || undefined,
       module: module || undefined,
+      user_name: userName || undefined,
       from: from || undefined,
       to: to || undefined,
     });
@@ -58,6 +70,7 @@ export default function ActivityLogsPage() {
   const handleClear = () => {
     setSearch("");
     setModule("");
+    setUserName("");
     setFrom("");
     setTo("");
     setPage(1);
@@ -71,7 +84,7 @@ export default function ActivityLogsPage() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           {/* Search */}
           <div className="relative">
             <Search
@@ -86,6 +99,20 @@ export default function ActivityLogsPage() {
               className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
+
+          {/* User Filter */}
+          <select
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          >
+            <option value="">All Users</option>
+            {usersList.map((u) => (
+              <option key={u.id} value={u.name}>
+                {u.name}
+              </option>
+            ))}
+          </select>
 
           {/* Module Filter */}
           <select
