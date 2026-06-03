@@ -33,6 +33,7 @@ import UsersPage from "./pages/users/UsersPage";
 
 import ActivityLogsPage from "./pages/activity-logs/ActivityLogsPage";
 import AreaCodesPage from "./pages/area-codes/AreaCodesPage";
+import SupplierPricingPage from "./pages/supplier-pricing/SupplierPricingPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -116,6 +117,14 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
+        <Route
+          path="supplier-pricing"
+          element={
+            <PermissionRoute permission="view_supplier_pricing">
+              <SupplierPricingPage />
+            </PermissionRoute>
+          }
+        />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
         <Route path="sales" element={<SalesPage />} />

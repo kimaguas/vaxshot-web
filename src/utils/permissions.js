@@ -6,10 +6,11 @@ export const PERMISSION_MODULES = [
   {
     module: "Products",
     permissions: [
-      { name: "view_products",   label: "View Products" },
-      { name: "create_products", label: "Add Product" },
-      { name: "edit_products",   label: "Edit Product" },
-      { name: "delete_products", label: "Delete Product" },
+      { name: "view_products",        label: "View Products" },
+      { name: "create_products",      label: "Add Product" },
+      { name: "edit_products",        label: "Edit Product" },
+      { name: "delete_products",      label: "Delete Product" },
+      { name: "view_acquisition_cost", label: "View Acquisition Cost" },
     ],
   },
   {
@@ -80,7 +81,7 @@ export const PERMISSION_MODULES = [
 export const ROLE_PERMISSION_PRESETS = {
   admin: [
     "view_dashboard",
-    "view_products", "create_products", "edit_products", "delete_products",
+    "view_products", "create_products", "edit_products", "delete_products", "view_acquisition_cost",
     "view_suppliers", "create_suppliers", "edit_suppliers", "delete_suppliers",
     "view_customers", "create_customers", "edit_customers", "delete_customers",
     "view_purchase_orders", "create_purchase_orders", "receive_purchase_orders", "cancel_purchase_orders",
@@ -92,7 +93,7 @@ export const ROLE_PERMISSION_PRESETS = {
   ],
   manager: [
     "view_dashboard",
-    "view_products", "create_products", "edit_products", "delete_products",
+    "view_products", "create_products", "edit_products", "delete_products", "view_acquisition_cost",
     "view_suppliers", "create_suppliers", "edit_suppliers", "delete_suppliers",
     "view_customers", "create_customers", "edit_customers", "delete_customers",
     "view_purchase_orders", "create_purchase_orders", "receive_purchase_orders", "cancel_purchase_orders",

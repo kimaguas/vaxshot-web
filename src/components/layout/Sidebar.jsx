@@ -11,12 +11,14 @@ import {
   UserCog,
   MapPin,
   ChevronRight,
+  Tag,
 } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard",       path: "/",                icon: LayoutDashboard, permission: "view_dashboard" },
   { label: "Products",        path: "/products",        icon: Package,         permission: "view_products" },
   { label: "Suppliers",       path: "/suppliers",       icon: Truck,           permission: "view_suppliers" },
+  { label: "Supplier Pricing", path: "/supplier-pricing", icon: Tag,            permission: "view_supplier_pricing" },
   { label: "Customers",       path: "/customers",       icon: Users,           permission: "view_customers" },
   { label: "Purchase Orders", path: "/purchase-orders", icon: ClipboardList,   permission: "view_purchase_orders" },
   { label: "Sales",           path: "/sales",           icon: ShoppingCart,    permission: "view_sales" },

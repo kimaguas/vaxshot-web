@@ -332,7 +332,9 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
                   <th className="text-left px-3 py-2">Ordered</th>
                   <th className="text-left px-3 py-2">Received</th>
                   <th className="text-left px-3 py-2">Remaining</th>
-                  <th className="text-left px-3 py-2">Unit Cost</th>
+                  {hasPermission("view_acquisition_cost") && (
+                    <th className="text-left px-3 py-2">Unit Cost</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -346,9 +348,11 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
                     <td className="px-3 py-2 text-orange-600">
                       {item.remaining_quantity}
                     </td>
-                    <td className="px-3 py-2">
-                      ₱{Number(item.unit_cost).toLocaleString()}
-                    </td>
+                    {hasPermission("view_acquisition_cost") && (
+                      <td className="px-3 py-2">
+                        ₱{Number(item.unit_cost).toLocaleString()}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

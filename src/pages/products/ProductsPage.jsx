@@ -430,9 +430,11 @@ export default function ProductsPage() {
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Supplier
               </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Acquisition Cost
-              </th>
+              {hasPermission("view_acquisition_cost") && (
+                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
+                  Acquisition Cost
+                </th>
+              )}
               <th
                 className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
                 onClick={() => handleSort("selling_price")}
@@ -489,9 +491,11 @@ export default function ProductsPage() {
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {product.supplier || "-"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    ₱{Number(product.acquisition_cost).toLocaleString()}
-                  </td>
+                  {hasPermission("view_acquisition_cost") && (
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      ₱{Number(product.acquisition_cost).toLocaleString()}
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-sm text-gray-600">
                     ₱{Number(product.selling_price).toLocaleString()}
                   </td>
