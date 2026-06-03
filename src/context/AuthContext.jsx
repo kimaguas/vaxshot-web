@@ -49,6 +49,9 @@ export const AuthProvider = ({ children }) => {
   const isStaff = () => user?.role === "staff";
   const isViewer = () => user?.role === "viewer";
 
+  const hasPermission = (permission) =>
+    Array.isArray(user?.permissions) && user.permissions.includes(permission);
+
   return (
     <AuthContext.Provider
       value={{
@@ -61,6 +64,7 @@ export const AuthProvider = ({ children }) => {
         isManager,
         isStaff,
         isViewer,
+        hasPermission,
       }}
     >
       {children}

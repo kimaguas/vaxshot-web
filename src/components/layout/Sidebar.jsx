@@ -9,72 +9,27 @@ import {
   ClipboardList,
   BarChart3,
   UserCog,
+  MapPin,
   ChevronRight,
 } from "lucide-react";
 
 const navItems = [
-  {
-    label: "Dashboard",
-    path: "/",
-    icon: LayoutDashboard,
-    roles: ["admin", "manager", "staff", "viewer"],
-  },
-  {
-    label: "Products",
-    path: "/products",
-    icon: Package,
-    roles: ["admin", "manager", "staff"],
-  },
-  {
-    label: "Suppliers",
-    path: "/suppliers",
-    icon: Truck,
-    roles: ["admin", "manager", "staff"],
-  },
-  {
-    label: "Customers",
-    path: "/customers",
-    icon: Users,
-    roles: ["admin", "manager", "staff"],
-  },
-  {
-    label: "Purchase Orders",
-    path: "/purchase-orders",
-    icon: ClipboardList,
-    roles: ["admin", "manager", "staff"],
-  },
-  {
-    label: "Sales",
-    path: "/sales",
-    icon: ShoppingCart,
-    roles: ["admin", "manager", "staff"],
-  },
-  {
-    label: "Reports",
-    path: "/reports",
-    icon: BarChart3,
-    roles: ["admin", "manager", "staff", "viewer"],
-  },
-  {
-    label: "Users",
-    path: "/users",
-    icon: UserCog,
-    roles: ["admin"],
-  },
-  {
-    label: "Activity Logs",
-    path: "/activity-logs",
-    icon: ClipboardList,
-    roles: ["admin"],
-  },
+  { label: "Dashboard",       path: "/",                icon: LayoutDashboard, permission: "view_dashboard" },
+  { label: "Products",        path: "/products",        icon: Package,         permission: "view_products" },
+  { label: "Suppliers",       path: "/suppliers",       icon: Truck,           permission: "view_suppliers" },
+  { label: "Customers",       path: "/customers",       icon: Users,           permission: "view_customers" },
+  { label: "Purchase Orders", path: "/purchase-orders", icon: ClipboardList,   permission: "view_purchase_orders" },
+  { label: "Sales",           path: "/sales",           icon: ShoppingCart,    permission: "view_sales" },
+  { label: "Reports",         path: "/reports",         icon: BarChart3,       permission: "view_reports" },
+  { label: "Area Codes",      path: "/area-codes",      icon: MapPin,          permission: "view_area_codes" },
+  { label: "Users",           path: "/users",           icon: UserCog,         permission: "view_users" },
+  { label: "Activity Logs",   path: "/activity-logs",   icon: ClipboardList,   permission: "view_activity_logs" },
 ];
 
 export default function Sidebar() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
-  const filteredItems = navItems.filter((item) =>
-    item.roles.includes(user?.role),
-  );
+  const filteredItems = navItems.filter((item) => hasPermission(item.permission));
 
   return (
     <aside className="w-64 bg-gray-900 text-white flex flex-col h-screen fixed left-0 top-0">

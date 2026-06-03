@@ -5,6 +5,7 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Edit, Trash2, Users } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
+import { useAuth } from "../../context/AuthContext";
 
 const CustomerModal = ({ customer, onClose, onSave }) => {
   const [form, setForm] = useState({
@@ -16,6 +17,15 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
     contact_no: customer?.contact_no || "",
     specialization: customer?.specialization || "",
     status: customer?.status || "active",
+    area_code_id: customer?.area_code_id || "",
+  });
+
+  const { data: areaCodesData } = useQuery({
+    queryKey: ["area-codes-list"],
+    queryFn: async () => {
+      const res = await api.get("/area-codes", { params: { list: 1 } });
+      return res.data;
+    },
   });
 
   const [selectedProvince, setSelectedProvince] = useState("");
@@ -200,6 +210,25 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
             </div>
           </div>
 
+          {/* Area Code */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Area Code
+            </label>
+            <select
+              value={form.area_code_id}
+              onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">— Select Area Code —</option>
+              {areaCodesData?.area_codes?.map((ac) => (
+                <option key={ac.id} value={ac.id}>
+                  {ac.code} — {ac.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -238,6 +267,7 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -314,16 +344,18 @@ export default function CustomersPage() {
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
           />
         </div>
-        <button
-          onClick={() => {
-            setSelected(null);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} />
-          Add Customer
-        </button>
+        {hasPermission("create_customers") && (
+          <button
+            onClick={() => {
+              setSelected(null);
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Add Customer
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -400,25 +432,29 @@ export default function CustomersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelected(customer);
-                          setShowModal(true);
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Delete ${customer.name}?`)) {
-                            deleteMutation.mutate(customer.id);
-                          }
-                        }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {hasPermission("edit_customers") && (
+                        <button
+                          onClick={() => {
+                            setSelected(customer);
+                            setShowModal(true);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      {hasPermission("delete_customers") && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete ${customer.name}?`)) {
+                              deleteMutation.mutate(customer.id);
+                            }
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

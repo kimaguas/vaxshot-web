@@ -4,6 +4,7 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
+import { useAuth } from "../../context/AuthContext";
 
 // Product Form Modal
 const ProductModal = ({ product, onClose, onSave }) => {
@@ -213,6 +214,7 @@ const ProductModal = ({ product, onClose, onSave }) => {
 
 export default function ProductsPage() {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -400,13 +402,15 @@ export default function ProductsPage() {
           )}
         </div>
 
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} />
-          Add Product
-        </button>
+        {hasPermission("create_products") && (
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Add Product
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -518,18 +522,22 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {hasPermission("edit_products") && (
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      {hasPermission("delete_products") && (
+                        <button
+                          onClick={() => handleDelete(product)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

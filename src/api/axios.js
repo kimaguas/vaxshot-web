@@ -1,4 +1,5 @@
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const api = axios.create({
   baseURL: "http://127.0.0.1:8000/api",
@@ -24,11 +25,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // If unauthorized, clear token and redirect to login
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
+    }
+    if (error.response?.status === 403) {
+      toast.error("You do not have permission to perform this action.");
     }
     return Promise.reject(error);
   },

@@ -32,6 +32,7 @@ import ReportsPage from "./pages/reports/ReportsPage";
 import UsersPage from "./pages/users/UsersPage";
 
 import ActivityLogsPage from "./pages/activity-logs/ActivityLogsPage";
+import AreaCodesPage from "./pages/area-codes/AreaCodesPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -47,6 +48,25 @@ const ProtectedRoute = ({ children }) => {
 
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Permission-gated route — redirects to / if the user lacks the required permission
+const PermissionRoute = ({ permission, children }) => {
+  const { hasPermission, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!hasPermission(permission)) {
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -100,8 +120,30 @@ export default function App() {
         <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
         <Route path="sales" element={<SalesPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="activity-logs" element={<ActivityLogsPage />} />
+        <Route
+          path="area-codes"
+          element={
+            <PermissionRoute permission="view_area_codes">
+              <AreaCodesPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="users"
+          element={
+            <PermissionRoute permission="view_users">
+              <UsersPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="activity-logs"
+          element={
+            <PermissionRoute permission="view_activity_logs">
+              <ActivityLogsPage />
+            </PermissionRoute>
+          }
+        />
       </Route>
 
       {/* Catch all */}

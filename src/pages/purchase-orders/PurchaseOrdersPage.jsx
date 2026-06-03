@@ -4,6 +4,7 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Eye, ClipboardList, CheckCircle } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
+import { useAuth } from "../../context/AuthContext";
 
 // Status Badge Component
 const StatusBadge = ({ status }) => {
@@ -263,6 +264,7 @@ const CreatePOModal = ({ onClose, onSave }) => {
 
 // View PO Modal
 const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
+  const { hasPermission } = useAuth();
   const [showReceiveForm, setShowReceiveForm] = useState(false);
   const [receiptForm, setReceiptForm] = useState({
     receipt_date: new Date().toISOString().split("T")[0],
@@ -490,7 +492,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
             >
               Close
             </button>
-            {po.status === "draft" && (
+            {po.status === "draft" && hasPermission("create_purchase_orders") && (
               <button
                 onClick={() => onConfirm(po.id)}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
@@ -499,7 +501,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
                 Confirm Order
               </button>
             )}
-            {["ordered", "partial"].includes(po.status) && (
+            {["ordered", "partial"].includes(po.status) && hasPermission("receive_purchase_orders") && (
               <button
                 onClick={() => setShowReceiveForm(!showReceiveForm)}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
@@ -516,6 +518,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
 
 export default function PurchaseOrdersPage() {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
@@ -586,13 +589,15 @@ export default function PurchaseOrdersPage() {
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
           />
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} />
-          Create PO
-        </button>
+        {hasPermission("create_purchase_orders") && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Create PO
+          </button>
+        )}
       </div>
 
       {/* Table */}

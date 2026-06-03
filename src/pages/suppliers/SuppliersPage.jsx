@@ -4,6 +4,7 @@ import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Search, Edit, Trash2, Truck } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
+import { useAuth } from "../../context/AuthContext";
 
 const SupplierModal = ({ supplier, onClose, onSave }) => {
   const [form, setForm] = useState({
@@ -135,6 +136,7 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
 
 export default function SuppliersPage() {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -211,16 +213,18 @@ export default function SuppliersPage() {
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
           />
         </div>
-        <button
-          onClick={() => {
-            setSelected(null);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} />
-          Add Supplier
-        </button>
+        {hasPermission("create_suppliers") && (
+          <button
+            onClick={() => {
+              setSelected(null);
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Add Supplier
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -301,25 +305,29 @@ export default function SuppliersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelected(supplier);
-                          setShowModal(true);
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Delete ${supplier.company}?`)) {
-                            deleteMutation.mutate(supplier.id);
-                          }
-                        }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {hasPermission("edit_suppliers") && (
+                        <button
+                          onClick={() => {
+                            setSelected(supplier);
+                            setShowModal(true);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      {hasPermission("delete_suppliers") && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete ${supplier.company}?`)) {
+                              deleteMutation.mutate(supplier.id);
+                            }
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
