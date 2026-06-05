@@ -84,7 +84,7 @@ export default function ActivityLogsPage() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Search */}
           <div className="relative">
             <Search
@@ -165,6 +165,7 @@ export default function ActivityLogsPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -242,6 +243,7 @@ export default function ActivityLogsPage() {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
     </div>

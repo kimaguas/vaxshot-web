@@ -178,7 +178,7 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Contact No */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -330,7 +330,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="relative">
           <Search
             size={18}
@@ -341,7 +341,7 @@ export default function CustomersPage() {
             placeholder="Search customers..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
           />
         </div>
         {hasPermission("create_customers") && (
@@ -360,6 +360,7 @@ export default function CustomersPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -462,6 +463,7 @@ export default function CustomersPage() {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 

@@ -22,7 +22,7 @@ const tabs = [
 
 // Date Filter Component
 const DateFilter = ({ from, to, onFromChange, onToChange, onSearch }) => (
-  <div className="flex items-center gap-3">
+  <div className="flex flex-wrap items-end gap-3">
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">
         From
@@ -31,7 +31,7 @@ const DateFilter = ({ from, to, onFromChange, onToChange, onSearch }) => (
         type="date"
         value={from}
         onChange={(e) => onFromChange(e.target.value)}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
       />
     </div>
     <div>
@@ -40,12 +40,12 @@ const DateFilter = ({ from, to, onFromChange, onToChange, onSearch }) => (
         type="date"
         value={to}
         onChange={(e) => onToChange(e.target.value)}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
       />
     </div>
     <button
       onClick={onSearch}
-      className="mt-5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
     >
       Generate
     </button>
@@ -148,7 +148,7 @@ const SalesReportTab = () => {
 
           {/* Sales Table */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">
@@ -215,7 +215,7 @@ const SalesReportTab = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </>
       ) : null}
@@ -268,7 +268,7 @@ const InventoryReportTab = () => {
 
           {/* Products Table */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">
@@ -333,7 +333,7 @@ const InventoryReportTab = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </>
       )}
@@ -389,7 +389,7 @@ const ExpiryReportTab = () => {
                   🚨 Expired Batches
                 </h4>
               </div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold text-gray-600">
@@ -424,7 +424,7 @@ const ExpiryReportTab = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
 
@@ -436,7 +436,7 @@ const ExpiryReportTab = () => {
                   ⚠️ Expiring Soon (30 days)
                 </h4>
               </div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold text-gray-600">
@@ -475,7 +475,7 @@ const ExpiryReportTab = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
 
@@ -526,7 +526,7 @@ const CustomerReportTab = () => {
       ) : data ? (
         <>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">
@@ -573,7 +573,7 @@ const CustomerReportTab = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </>
       ) : null}
@@ -635,7 +635,7 @@ const POReportTab = () => {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">
@@ -688,7 +688,7 @@ const POReportTab = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </>
       ) : null}
@@ -702,7 +702,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-1 flex gap-1">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-1 flex flex-wrap gap-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}

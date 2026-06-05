@@ -56,7 +56,7 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">
             {catalog ? "Edit Price Entry" : "Add Price Entry"}
@@ -159,7 +159,7 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
             </div>
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="grid grid-cols-[1fr_140px_36px] bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-200">
+              <div className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[1fr_140px_36px] bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-200">
                 <span>Quantity Tier</span>
                 <span>Price (PHP)</span>
                 <span />
@@ -168,7 +168,7 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
                 {form.tiers.map((tier, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-[1fr_140px_36px] items-center px-3 py-2 gap-2"
+                    className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[1fr_140px_36px] items-center px-3 py-2 gap-2"
                   >
                     <input
                       type="text"
@@ -536,7 +536,7 @@ export default function SupplierPricingPage() {
               placeholder="Search product or generic name…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-72 text-sm"
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72 text-sm"
             />
           </div>
           <select
@@ -575,6 +575,7 @@ export default function SupplierPricingPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -614,6 +615,7 @@ export default function SupplierPricingPage() {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 

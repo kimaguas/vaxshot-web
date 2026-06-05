@@ -109,7 +109,7 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">
             Create New Sale
@@ -117,8 +117,8 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Customer *
               </label>
@@ -336,7 +336,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
@@ -372,7 +372,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-3"
             >
               <h4 className="text-sm font-semibold text-blue-700">Edit Sale Details</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Invoice Number</label>
                   <input
@@ -432,7 +432,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
           )}
 
           {/* Sale Details */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-500">Invoice Number</p>
               <p className="font-medium">{sale.invoice_number || "-"}</p>
@@ -536,7 +536,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               className="border border-gray-200 rounded-lg p-4 space-y-3"
             >
               <h4 className="text-sm font-semibold text-gray-700">Record Payment</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Amount *</label>
                   <input
@@ -826,7 +826,7 @@ export default function SalesPage() {
     <div className="space-y-4">
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Sales",   value: totals?.total_sales,   color: "text-blue-600",  bg: "bg-blue-50",  border: "border-blue-100" },
           { label: "Total Paid",    value: totals?.total_paid,    color: "text-green-600", bg: "bg-green-50", border: "border-green-100" },
@@ -967,6 +967,7 @@ export default function SalesPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -1078,6 +1079,7 @@ export default function SalesPage() {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 

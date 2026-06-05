@@ -84,7 +84,7 @@ const CreatePOModal = ({ onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">
             Create Purchase Order
@@ -93,8 +93,8 @@ const CreatePOModal = ({ onClose, onSave }) => {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Supplier & Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Supplier *
               </label>
@@ -163,7 +163,7 @@ const CreatePOModal = ({ onClose, onSave }) => {
                   key={index}
                   className="grid grid-cols-12 gap-2 items-center"
                 >
-                  <div className="col-span-5">
+                  <div className="col-span-12 sm:col-span-5">
                     <select
                       value={item.product_id}
                       onChange={(e) =>
@@ -180,7 +180,7 @@ const CreatePOModal = ({ onClose, onSave }) => {
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-5 sm:col-span-3">
                     <input
                       type="number"
                       placeholder="Qty"
@@ -193,7 +193,7 @@ const CreatePOModal = ({ onClose, onSave }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-5 sm:col-span-3">
                     <input
                       type="number"
                       placeholder="Unit Cost"
@@ -207,7 +207,7 @@ const CreatePOModal = ({ onClose, onSave }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
-                  <div className="col-span-1">
+                  <div className="col-span-2 sm:col-span-1">
                     {form.items.length > 1 && (
                       <button
                         type="button"
@@ -288,7 +288,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-800">
@@ -301,7 +301,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
 
         <div className="p-6 space-y-4">
           {/* PO Details */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-500">Order Date</p>
               <p className="font-medium">{po.order_date}</p>
@@ -368,7 +368,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
               <h4 className="text-sm font-semibold text-gray-700">
                 Receive Delivery
               </h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Receipt Date *
@@ -408,7 +408,7 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
                   <p className="text-sm font-medium text-gray-700">
                     {item.brand_name}
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
                         Lot Number *
@@ -579,7 +579,7 @@ export default function PurchaseOrdersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="relative">
           <Search
             size={18}
@@ -590,7 +590,7 @@ export default function PurchaseOrdersPage() {
             placeholder="Search PO number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
           />
         </div>
         {hasPermission("create_purchase_orders") && (
@@ -606,6 +606,7 @@ export default function PurchaseOrdersPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -686,6 +687,7 @@ export default function PurchaseOrdersPage() {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 
