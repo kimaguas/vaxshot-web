@@ -10,9 +10,6 @@ import MainLayout from "./components/layout/MainLayout";
 // Dashboard
 import DashboardPage from "./pages/dashboard/DashboardPage";
 
-// Products
-import ProductsPage from "./pages/products/ProductsPage";
-
 // Suppliers
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 
@@ -39,7 +36,7 @@ import UsersPage from "./pages/users/UsersPage";
 
 import ActivityLogsPage from "./pages/activity-logs/ActivityLogsPage";
 import AreaCodesPage from "./pages/area-codes/AreaCodesPage";
-import SupplierPricingPage from "./pages/supplier-pricing/SupplierPricingPage";
+import ProductsPage from "./pages/products/ProductsPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -121,13 +118,12 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="products" element={<ProductsPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
         <Route
-          path="supplier-pricing"
+          path="products"
           element={
-            <PermissionRoute permission="view_supplier_pricing">
-              <SupplierPricingPage />
+            <PermissionRoute permission="view_products">
+              <ProductsPage />
             </PermissionRoute>
           }
         />

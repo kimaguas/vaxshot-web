@@ -1,95 +1,94 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Tag,
+  ChevronDown,
+  ChevronRight,
+  Upload,
+  X,
+} from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
 
-// Product Form Modal
-const ProductModal = ({ product, onClose, onSave }) => {
+// ── Modal ─────────────────────────────────────────────────────────────────────
+
+const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
   const [form, setForm] = useState({
-    product_code: product?.product_code || "",
-    brand_name: product?.brand_name || "",
-    description: product?.description || "",
-    acquisition_cost: product?.acquisition_cost || "",
-    selling_price: product?.selling_price || "",
-    stock: product?.stock || 0,
-    maintaining_stock: product?.maintaining_stock || 0,
-    supplier_id: product?.supplier_id || "",
-    status: product?.status || "active",
+    supplier_id:      catalog?.supplier_id      ?? "",
+    brand_name:       catalog?.brand_name       ?? "",
+    lot_no:           catalog?.lot_no           ?? "",
+    acquisition_cost: catalog?.acquisition_cost ?? "",
+    indication:       catalog?.indication       ?? "",
+    expiry_date:      catalog?.expiry_date      ?? "",
+    effective_date:   catalog?.effective_date   ?? "",
+    notes:            catalog?.notes            ?? "",
+    status:           catalog?.status           ?? "active",
+    tiers:          catalog?.tiers?.length
+      ? catalog.tiers.map((t) => ({ min_qty: t.min_qty ?? 1, max_qty: t.max_qty ?? "", price: t.price }))
+      : [{ min_qty: 1, max_qty: "", price: "" }],
   });
 
-  const { data: suppliersData } = useQuery({
-    queryKey: ["suppliers-dropdown"],
-    queryFn: async () => {
-      const response = await api.get("/suppliers", {
-        params: { status: "active" },
-      });
-      return response.data;
-    },
-  });
+  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const setTier = (index, key, value) =>
+    setForm((f) => {
+      const tiers = [...f.tiers];
+      tiers[index] = { ...tiers[index], [key]: value };
+      return { ...f, tiers };
+    });
+
+  const addTier = () =>
+    setForm((f) => ({ ...f, tiers: [...f.tiers, { min_qty: 1, max_qty: "", price: "" }] }));
+
+  const removeTier = (index) =>
+    setForm((f) => ({ ...f, tiers: f.tiers.filter((_, i) => i !== index) }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    onSave({
+      ...form,
+      tiers: form.tiers.map((t, i) => ({
+        min_qty:    parseInt(t.min_qty) || 1,
+        max_qty:    t.max_qty !== "" ? parseInt(t.max_qty) : null,
+        tier_label: t.max_qty !== "" ? `${t.min_qty}-${t.max_qty}vls` : `${t.min_qty || 1}vls & up`,
+        price:      t.price,
+        sort_order: i,
+      })),
+    });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">
-            {product ? "Edit Product" : "Add New Product"}
+            {catalog ? "Edit Product" : "Add Product"}
           </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={20} />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Code *
-              </label>
-              <input
-                type="text"
-                value={form.product_code}
-                onChange={(e) =>
-                  setForm({ ...form, product_code: e.target.value })
-                }
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Brand Name *
-              </label>
-              <input
-                type="text"
-                value={form.brand_name}
-                onChange={(e) =>
-                  setForm({ ...form, brand_name: e.target.value })
-                }
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Supplier */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Supplier
+              Supplier *
             </label>
             <select
               value={form.supplier_id}
-              onChange={(e) =>
-                setForm({ ...form, supplier_id: e.target.value })
-              }
+              onChange={(e) => setField("supplier_id", e.target.value)}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select Supplier</option>
-              {suppliersData?.suppliers?.map((s) => (
+              <option value="">Select supplier</option>
+              {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.company}
                 </option>
@@ -97,93 +96,93 @@ const ProductModal = ({ product, onClose, onSave }) => {
             </select>
           </div>
 
-          {/* Description */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Brand / Product Name *
+              </label>
+              <input
+                type="text"
+                value={form.brand_name}
+                onChange={(e) => setField("brand_name", e.target.value)}
+                required
+                placeholder="e.g. Gardasil 9 (HPV)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Lot No.
+              </label>
+              <input
+                type="text"
+                value={form.lot_no}
+                onChange={(e) => setField("lot_no", e.target.value)}
+                placeholder="e.g. LOT-2026-001"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              Indication / Type
             </label>
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              rows={3}
+            <input
+              type="text"
+              value={form.indication}
+              onChange={(e) => setField("indication", e.target.value)}
+              placeholder="e.g. GSK / Quadrivalent Influenza Vaccine"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Acquisition Cost *
+                Acquisition Cost (PHP)
               </label>
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 value={form.acquisition_cost}
-                onChange={(e) =>
-                  setForm({ ...form, acquisition_cost: e.target.value })
-                }
-                required
-                min="0"
-                step="0.01"
+                onChange={(e) => setField("acquisition_cost", e.target.value)}
+                placeholder="0.00"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Selling Price *
+                Expiry Date
               </label>
               <input
-                type="number"
-                value={form.selling_price}
-                onChange={(e) =>
-                  setForm({ ...form, selling_price: e.target.value })
-                }
-                required
-                min="0"
-                step="0.01"
+                type="date"
+                value={form.expiry_date}
+                onChange={(e) => setField("expiry_date", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price List Date
+              </label>
+              <input
+                type="date"
+                value={form.effective_date}
+                onChange={(e) => setField("effective_date", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Current Stock
-              </label>
-              <input
-                type="number"
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Maintaining Stock
-              </label>
-              <input
-                type="number"
-                value={form.maintaining_stock}
-                onChange={(e) =>
-                  setForm({ ...form, maintaining_stock: e.target.value })
-                }
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
             <select
               value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              onChange={(e) => setField("status", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="active">Active</option>
@@ -191,7 +190,92 @@ const ProductModal = ({ product, onClose, onSave }) => {
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          {/* Price Tiers */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Price Tiers *
+              </label>
+              <button
+                type="button"
+                onClick={addTier}
+                className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                <Plus size={14} /> Add Tier
+              </button>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="grid grid-cols-[72px_72px_1fr_110px_36px] bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-200 gap-2">
+                <span>Min Qty</span>
+                <span>Max Qty</span>
+                <span>Label (auto)</span>
+                <span>Price (PHP)</span>
+                <span />
+              </div>
+              <div className="divide-y divide-gray-100">
+                {form.tiers.map((tier, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[72px_72px_1fr_110px_36px] items-center px-3 py-2 gap-2"
+                  >
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.min_qty}
+                      onChange={(e) => setTier(i, "min_qty", e.target.value)}
+                      required
+                      placeholder="1"
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.max_qty}
+                      onChange={(e) => setTier(i, "max_qty", e.target.value)}
+                      placeholder="∞"
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                    />
+                    <span className="text-xs text-gray-400 self-center truncate">
+                      {tier.max_qty ? `${tier.min_qty || 1}-${tier.max_qty}vls` : `${tier.min_qty || 1}vls & up`}
+                    </span>
+                    <input
+                      type="number"
+                      value={tier.price}
+                      onChange={(e) => setTier(i, "price", e.target.value)}
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeTier(i)}
+                      disabled={form.tiers.length === 1}
+                      className="p-1 text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes
+            </label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setField("notes", e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
@@ -201,9 +285,10 @@ const ProductModal = ({ product, onClose, onSave }) => {
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
             >
-              {product ? "Update" : "Create"}
+              {saving ? "Saving…" : catalog ? "Update" : "Create"}
             </button>
           </div>
         </form>
@@ -212,75 +297,276 @@ const ProductModal = ({ product, onClose, onSave }) => {
   );
 };
 
+// ── Import Modal ──────────────────────────────────────────────────────────────
+
+const ImportModal = ({ suppliers, onClose, onImport, importing }) => {
+  const fileRef = useRef();
+  const [supplierId, setSupplierId] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!fileRef.current?.files[0]) return toast.error("Please select a file");
+    if (!supplierId) return toast.error("Please select a supplier");
+    onImport({ file: fileRef.current.files[0], supplier_id: supplierId });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-800">Import Price List</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Supplier *
+            </label>
+            <select
+              value={supplierId}
+              onChange={(e) => setSupplierId(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select supplier</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.company}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              File (Excel / CSV) *
+            </label>
+            <input
+              type="file"
+              ref={fileRef}
+              accept=".xlsx,.xls,.csv"
+              required
+              className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Required columns: brand_name, generic_name, tier_label, price. Optional: effective_date
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={importing}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
+            >
+              {importing ? "Importing…" : "Import"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ── Product Row ───────────────────────────────────────────────────────────────
+
+const ProductRow = ({ catalog, canManage, onEdit, onDelete }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <>
+      <tr
+        className="hover:bg-gray-50 transition-colors cursor-pointer"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <td className="px-4 py-3 w-8 text-gray-400">
+          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </td>
+        <td className="px-4 py-3">
+          <p className="text-sm font-medium text-gray-800">{catalog.brand_name}</p>
+          {catalog.indication && (
+            <p className="text-xs text-gray-500 truncate max-w-xs">{catalog.indication}</p>
+          )}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-600">
+          {catalog.supplier?.company || "-"}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-500">
+          {catalog.tiers?.length ?? 0} tier{catalog.tiers?.length !== 1 ? "s" : ""}
+        </td>
+        <td className="px-4 py-3">
+          {catalog.effective_date ? (
+            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              Updated {catalog.effective_date}
+            </span>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
+        <td className="px-4 py-3">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+              catalog.status === "active"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-500"
+            }`}
+          >
+            {catalog.status}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          {canManage && (
+            <div
+              className="flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => onEdit(catalog)}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <Edit size={15} />
+              </button>
+              <button
+                onClick={() => onDelete(catalog)}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          )}
+        </td>
+      </tr>
+
+      {expanded && catalog.tiers?.length > 0 && (
+        <tr className="bg-blue-50">
+          <td colSpan={7} className="px-8 py-3">
+            <div className="overflow-x-auto">
+              <table className="w-full max-w-sm text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b border-blue-200">
+                    <th className="text-left py-1 pr-6">Quantity Tier</th>
+                    <th className="text-right py-1">Price (PHP)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {catalog.tiers.map((tier) => (
+                    <tr key={tier.id} className="border-b border-blue-100 last:border-0">
+                      <td className="py-1 pr-6 text-gray-700">{tier.tier_label}</td>
+                      <td className="py-1 text-right font-medium text-gray-800">
+                        {Number(tier.price).toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function ProductsPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
-  const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [page, setPage] = useState(1);
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [sortField, setSortField] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const canManage = hasPermission("manage_products");
 
-  // Fetch products
+  const [search, setSearch]                 = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [page, setPage]                     = useState(1);
+  const [showModal, setShowModal]           = useState(false);
+  const [showImport, setShowImport]         = useState(false);
+  const [selected, setSelected]             = useState(null);
+
   const { data: suppliersData } = useQuery({
-    queryKey: ["suppliers-filter"],
+    queryKey: ["suppliers-list"],
     queryFn: async () => {
-      const response = await api.get("/suppliers", {
-        params: { status: "active" },
-      });
-      return response.data;
+      const res = await api.get("/suppliers", { params: { status: "active", per_page: 200 } });
+      return res.data;
     },
   });
+  const suppliers = suppliersData?.suppliers || [];
 
   const { data, isLoading } = useQuery({
-    queryKey: ["products", search, page, supplierFilter, sortField, sortOrder],
+    queryKey: ["products", search, supplierFilter, page],
     queryFn: async () => {
-      const response = await api.get("/products", {
-        params: { search, page, supplier_id: supplierFilter },
+      const res = await api.get("/products", {
+        params: { search, supplier_id: supplierFilter || undefined, page },
       });
-      return response.data;
+      return res.data;
     },
   });
 
-  // Create product
+  const products   = data?.products   || [];
+  const pagination = data?.pagination || null;
+
   const createMutation = useMutation({
-    mutationFn: (data) => api.post("/products", data),
+    mutationFn: (payload) => api.post("/products", payload),
     onSuccess: () => {
       queryClient.invalidateQueries(["products"]);
-      toast.success("Product created successfully!");
+      toast.success("Product created!");
       setShowModal(false);
     },
-    onError: (err) => {
-      toast.error(err.response?.data?.message || "Failed to create product");
-    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to create product"),
   });
 
-  // Update product
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => api.put(`/products/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries(["products"]);
-      toast.success("Product updated successfully!");
+      toast.success("Product updated!");
       setShowModal(false);
       setSelected(null);
     },
-    onError: (err) => {
-      toast.error(err.response?.data?.message || "Failed to update product");
-    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to update product"),
   });
 
-  // Delete product
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(["products"]);
-      toast.success("Product deleted successfully!");
+      toast.success("Product deleted.");
     },
-    onError: (err) => {
-      toast.error(err.response?.data?.message || "Failed to delete product");
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to delete product"),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: ({ file, supplier_id }) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("supplier_id", supplier_id);
+      return api.post("/products/import", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(["products"]);
+      const { count, errors } = res.data;
+      toast.success(`${count} products imported successfully`);
+      if (errors?.length) {
+        errors.forEach((e) => toast.error(e, { duration: 6000 }));
+      }
+      setShowImport(false);
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Import failed"),
   });
 
   const handleSave = (form) => {
@@ -291,278 +577,125 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDelete = (product) => {
-    if (window.confirm(`Delete ${product.brand_name}?`)) {
-      deleteMutation.mutate(product.id);
+  const handleDelete = (catalog) => {
+    if (window.confirm(`Delete "${catalog.brand_name}"?`)) {
+      deleteMutation.mutate(catalog.id);
     }
   };
 
-  const handleEdit = (product) => {
-    setSelected(product);
-    setShowModal(true);
-  };
-
-  const handleAdd = () => {
-    setSelected(null);
-    setShowModal(true);
-  };
-
-  const products = data?.products || [];
-  const pagination = data?.pagination || null;
-
-  // Sort products client-side
-  const sortedProducts = [...products].sort((a, b) => {
-    if (sortField === "stock") {
-      return sortOrder === "asc" ? a.stock - b.stock : b.stock - a.stock;
-    }
-    if (sortField === "brand_name") {
-      return sortOrder === "asc"
-        ? a.brand_name.localeCompare(b.brand_name)
-        : b.brand_name.localeCompare(a.brand_name);
-    }
-    if (sortField === "selling_price") {
-      return sortOrder === "asc"
-        ? a.selling_price - b.selling_price
-        : b.selling_price - a.selling_price;
-    }
-    return 0;
-  });
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
-    }
-  };
-
-  const SortIcon = ({ field }) => {
-    if (sortField !== field)
-      return <span className="text-gray-300 ml-1">↕</span>;
-    return (
-      <span className="text-blue-600 ml-1">
-        {sortOrder === "asc" ? "↑" : "↓"}
-      </span>
-    );
-  };
+  const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-wrap items-center gap-3 justify-between">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
           <div className="relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search product or generic name…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72 text-sm"
             />
           </div>
-
-          {/* Supplier Filter */}
           <select
             value={supplierFilter}
-            onChange={(e) => {
-              setSupplierFilter(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setSupplierFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Suppliers</option>
-            {suppliersData?.suppliers?.map((s) => (
+            {suppliers.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.company}
               </option>
             ))}
           </select>
-
-          {/* Clear Filters */}
-          {(search || supplierFilter) && (
-            <button
-              onClick={() => {
-                setSearch("");
-                setSupplierFilter("");
-                setPage(1);
-              }}
-              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Clear Filters
-            </button>
-          )}
         </div>
 
-        {hasPermission("create_products") && (
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={18} />
-            Add Product
-          </button>
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              <Upload size={16} />
+              Import
+            </button>
+            <button
+              onClick={() => { setSelected(null); setShowModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              <Plus size={16} />
+              Add Entry
+            </button>
+          </div>
         )}
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Product Code
-              </th>
-              <th
-                className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
-                onClick={() => handleSort("brand_name")}
-              >
-                Brand Name <SortIcon field="brand_name" />
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Supplier
-              </th>
-              {hasPermission("view_acquisition_cost") && (
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                  Acquisition Cost
-                </th>
-              )}
-              <th
-                className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
-                onClick={() => handleSort("selling_price")}
-              >
-                Selling Price <SortIcon field="selling_price" />
-              </th>
-              <th
-                className="text-left px-6 py-4 text-sm font-semibold text-gray-600 cursor-pointer hover:text-blue-600 select-none"
-                onClick={() => handleSort("stock")}
-              >
-                Stock <SortIcon field="stock" />
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Status
-              </th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {isLoading ? (
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <td colSpan={7} className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                </td>
+                <th className="w-8 px-4 py-3" />
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Product</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Supplier</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Tiers</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Price List Date</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600">Actions</th>
               </tr>
-            ) : products.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-12">
-                  <Package size={40} className="mx-auto text-gray-300 mb-2" />
-                  <p className="text-gray-400">No products found</p>
-                </td>
-              </tr>
-            ) : (
-              sortedProducts.map((product) => (
-                <tr
-                  key={product.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                    {product.product_code}
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-gray-800">
-                      {product.brand_name}
-                    </p>
-                    {product.description && (
-                      <p className="text-xs text-gray-500 truncate max-w-xs">
-                        {product.description}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {product.supplier || "-"}
-                  </td>
-                  {hasPermission("view_acquisition_cost") && (
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      ₱{Number(product.acquisition_cost).toLocaleString()}
-                    </td>
-                  )}
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    ₱{Number(product.selling_price).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`text-sm font-medium ${
-                        product.is_low_stock ? "text-red-600" : "text-green-600"
-                      }`}
-                    >
-                      {product.stock}
-                      {product.is_low_stock && (
-                        <span className="ml-1 text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
-                          Low
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {product.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {hasPermission("edit_products") && (
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
-                      )}
-                      {hasPermission("delete_products") && (
-                        <button
-                          onClick={() => handleDelete(product)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : products.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12">
+                    <Tag size={40} className="mx-auto text-gray-300 mb-2" />
+                    <p className="text-gray-400">No products found</p>
+                  </td>
+                </tr>
+              ) : (
+                products.map((product) => (
+                  <ProductRow
+                    key={product.id}
+                    catalog={product}
+                    canManage={canManage}
+                    onEdit={(p) => { setSelected(p); setShowModal(true); }}
+                    onDelete={handleDelete}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
         <Pagination pagination={pagination} onPageChange={(p) => setPage(p)} />
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <ProductModal
-          product={selected}
-          onClose={() => {
-            setShowModal(false);
-            setSelected(null);
-          }}
+        <PricingModal
+          catalog={selected}
+          suppliers={suppliers}
+          onClose={() => { setShowModal(false); setSelected(null); }}
           onSave={handleSave}
+          saving={saving}
+        />
+      )}
+
+      {showImport && (
+        <ImportModal
+          suppliers={suppliers}
+          onClose={() => setShowImport(false)}
+          onImport={(payload) => importMutation.mutate(payload)}
+          importing={importMutation.isPending}
         />
       )}
     </div>

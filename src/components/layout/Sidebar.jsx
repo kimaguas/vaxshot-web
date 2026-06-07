@@ -2,7 +2,6 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard,
-  Package,
   Truck,
   Users,
   ShoppingCart,
@@ -19,9 +18,8 @@ import {
 
 const navItems = [
   { label: "Dashboard",       path: "/",                icon: LayoutDashboard, permission: "view_dashboard" },
-  { label: "Products",        path: "/products",        icon: Package,         permission: "view_products" },
   { label: "Suppliers",       path: "/suppliers",       icon: Truck,           permission: "view_suppliers" },
-  { label: "Supplier Pricing", path: "/supplier-pricing", icon: Tag,           permission: "view_supplier_pricing" },
+  { label: "Products",         path: "/products",         icon: Tag,           permission: "view_products" },
   { label: "Customers",       path: "/customers",       icon: Users,           permission: "view_customers" },
   { label: "Purchase Orders", path: "/purchase-orders", icon: ClipboardList,   permission: "view_purchase_orders" },
   { label: "Sales",           path: "/sales",           icon: ShoppingCart,    permission: "view_sales" },
@@ -48,11 +46,14 @@ export default function Sidebar({ isOpen, onClose }) {
       `}
     >
       {/* Logo */}
-      <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-blue-400">💉 VaxshotApp</h1>
-          <p className="text-xs text-gray-400 mt-1">Pharma Inventory System</p>
-        </div>
+      <div className="px-4 py-4 border-b border-gray-700 flex items-center justify-between">
+        <NavLink to="/" onClick={onClose}>
+          <img
+            src="/logo.png"
+            alt="Vaxshot"
+            className="h-14 w-auto object-contain"
+          />
+        </NavLink>
         {/* Close button — mobile only */}
         <button
           onClick={onClose}

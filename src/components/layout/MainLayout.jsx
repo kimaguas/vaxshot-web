@@ -7,7 +7,6 @@ const pageTitles = {
   "/": "Dashboard",
   "/products": "Products",
   "/suppliers": "Suppliers",
-  "/supplier-pricing": "Supplier Pricing",
   "/customers": "Customers",
   "/purchase-orders": "Purchase Orders",
   "/sales": "Sales",

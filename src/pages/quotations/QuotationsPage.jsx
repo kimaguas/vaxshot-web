@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
+import ProductSelect from "../../components/ui/ProductSelect";
 import { useAuth } from "../../context/AuthContext";
 
 const StatusBadge = ({ status }) => {
@@ -68,8 +69,15 @@ const SendEmailModal = ({ quotation, onClose, onSend, isSending }) => {
 
         <div className="p-6 space-y-4">
           <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600">
-            <span className="font-medium">To:</span> {quotation.email}
+            <span className="font-medium">To:</span>{" "}
+            {(quotation.emails ?? [quotation.email]).join(", ")}
           </div>
+          {quotation.cc_emails?.length > 0 && (
+            <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600">
+              <span className="font-medium">CC:</span>{" "}
+              {quotation.cc_emails.join(", ")}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -157,10 +165,18 @@ const SendEmailModal = ({ quotation, onClose, onSend, isSending }) => {
 const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
   const isEdit = !!initial;
 
+  const parseEmails = (val) => {
+    if (Array.isArray(val)) return val.length ? val : [""];
+    if (typeof val === "string" && val) return val.split(",").map((e) => e.trim());
+    return [""];
+  };
+
   const [form, setForm] = useState({
     customer_name:  initial?.customer_name  ?? "",
     contact_name:   initial?.contact_name   ?? "",
-    email:          initial?.email          ?? "",
+    address:        initial?.address        ?? "",
+    emails:         parseEmails(initial?.emails ?? initial?.email),
+    cc_emails:      Array.isArray(initial?.cc_emails) && initial.cc_emails.length ? initial.cc_emails : [],
     quotation_date: initial?.quotation_date ?? new Date().toISOString().split("T")[0],
     valid_until:    initial?.valid_until    ?? "",
     notes:          initial?.notes          ?? "",
@@ -175,10 +191,12 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
       : [{ product_id: "", quantity: "", unit_price: "", description: "", expiry_date: "" }],
   });
 
-  const { data: productsData } = useQuery({
-    queryKey: ["products-list"],
+  const { data: catalogsData } = useQuery({
+    queryKey: ["catalogs-for-quotation"],
     queryFn: async () => {
-      const response = await api.get("/products");
+      const response = await api.get("/products", {
+        params: { status: "active", per_page: 500 },
+      });
       return response.data;
     },
   });
@@ -192,12 +210,31 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
     setForm({ ...form, items: form.items.filter((_, i) => i !== index) });
   };
 
+  const getTierPrice = (tiers, qty) => {
+    if (!tiers?.length) return "";
+    const n = parseInt(qty) || 1;
+    const tier = tiers.find(
+      (t) => n >= (t.min_qty ?? 1) && (t.max_qty == null || n <= t.max_qty)
+    );
+    return tier?.price ?? tiers[tiers.length - 1]?.price ?? "";
+  };
+
   const updateItem = (index, field, value) => {
     const items = [...form.items];
     items[index][field] = value;
     if (field === "product_id") {
-      const product = productsData?.products?.find((p) => p.id === parseInt(value));
-      if (product) items[index].unit_price = product.selling_price;
+      const catalog = catalogsData?.products?.find((c) => c.id === parseInt(value));
+      if (catalog) {
+        items[index].unit_price  = getTierPrice(catalog.tiers, items[index].quantity || 1);
+        items[index].description = catalog.indication  ?? "";
+        items[index].expiry_date = catalog.expiry_date ?? "";
+      }
+    }
+    if (field === "quantity") {
+      const catalog = catalogsData?.products?.find((c) => c.id === parseInt(items[index].product_id));
+      if (catalog?.tiers?.length) {
+        items[index].unit_price = getTierPrice(catalog.tiers, value);
+      }
     }
     setForm({ ...form, items });
   };
@@ -206,9 +243,34 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
     return sum + (Number(item.quantity) * Number(item.unit_price) || 0);
   }, 0);
 
+  const addEmail = () => setForm({ ...form, emails: [...form.emails, ""] });
+
+  const removeEmail = (idx) => {
+    if (form.emails.length === 1) return;
+    setForm({ ...form, emails: form.emails.filter((_, i) => i !== idx) });
+  };
+
+  const updateEmail = (idx, value) => {
+    const emails = [...form.emails];
+    emails[idx] = value;
+    setForm({ ...form, emails });
+  };
+
+  const addCcEmail = () => setForm({ ...form, cc_emails: [...form.cc_emails, ""] });
+
+  const removeCcEmail = (idx) => setForm({ ...form, cc_emails: form.cc_emails.filter((_, i) => i !== idx) });
+
+  const updateCcEmail = (idx, value) => {
+    const cc_emails = [...form.cc_emails];
+    cc_emails[idx] = value;
+    setForm({ ...form, cc_emails });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    const validEmails   = form.emails.map((e) => e.trim()).filter(Boolean);
+    const validCcEmails = form.cc_emails.map((e) => e.trim()).filter(Boolean);
+    onSave({ ...form, emails: validEmails, email: validEmails[0] ?? "", cc_emails: validCcEmails });
   };
 
   return (
@@ -248,15 +310,95 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
               <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-                placeholder="e.g. juan@metro-pharma.com"
+                type="text"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                placeholder="e.g. 123 Rizal St., Quezon City"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
+            </div>
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">Email Address *</label>
+                <button
+                  type="button"
+                  onClick={addEmail}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  + Add Email
+                </button>
+              </div>
+              <div className="space-y-2">
+                {form.emails.map((email, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => updateEmail(idx, e.target.value)}
+                      required={idx === 0}
+                      placeholder={idx === 0 ? "e.g. juan@metro-pharma.com" : "e.g. cc@metro-pharma.com"}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    {form.emails.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeEmail(idx)}
+                        className="text-gray-400 hover:text-red-500 shrink-0"
+                        title="Remove email"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  CC Email <span className="text-xs text-gray-400 font-normal">(optional)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={addCcEmail}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  + Add CC
+                </button>
+              </div>
+              {form.cc_emails.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={addCcEmail}
+                  className="text-sm text-blue-500 hover:text-blue-700"
+                >
+                  + Add CC recipient
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  {form.cc_emails.map((email, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => updateCcEmail(idx, e.target.value)}
+                        placeholder="e.g. manager@company.com"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeCcEmail(idx)}
+                        className="text-gray-400 hover:text-red-500 shrink-0"
+                        title="Remove CC"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quotation Date *</label>
@@ -302,19 +444,13 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
                 <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2">
                   {/* Row 1: product, qty, price, total, remove */}
                   <div className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <select
-                        value={item.product_id}
-                        onChange={(e) => updateItem(index, "product_id", e.target.value)}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      >
-                        <option value="">Select Product</option>
-                        {productsData?.products?.map((p) => (
-                          <option key={p.id} value={p.id}>{p.brand_name}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <ProductSelect
+                      products={catalogsData?.products?.slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name)) ?? []}
+                      value={item.product_id}
+                      onChange={(id) => updateItem(index, "product_id", id)}
+                      required
+                      className="flex-1"
+                    />
                     <div className="w-20">
                       <input
                         type="number"
@@ -351,24 +487,39 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
                     </button>
                   </div>
 
-                  {/* Row 2: indication + expiry */}
+                  {/* Tier reference badges */}
+                  {item.product_id && (() => {
+                    const cat = catalogsData?.products?.find(c => c.id === parseInt(item.product_id));
+                    return cat?.tiers?.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 px-1">
+                        {cat.tiers.map((t, ti) => (
+                          <span key={ti} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                            {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Row 2: indication + expiry (auto-filled) */}
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <input
                         type="text"
                         value={item.description}
-                        onChange={(e) => updateItem(index, "description", e.target.value)}
-                        placeholder="Indication / Type (e.g. GSK / Quadrivalent Influenza Vaccine)"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                        readOnly
+                        placeholder="Indication / Type (auto-filled)"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
                       />
                     </div>
                     <div className="w-40">
                       <input
-                        type="date"
+                        type="text"
                         value={item.expiry_date}
-                        onChange={(e) => updateItem(index, "expiry_date", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
-                        title="Expiry Date"
+                        readOnly
+                        placeholder="Expiry (auto-filled)"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                        title="Expiry Date — set in Supplier Pricing"
                       />
                     </div>
                   </div>
@@ -435,10 +586,26 @@ const ViewQuotationModal = ({ quotation, onClose, onEdit, onDelete, onSendClick,
               <p className="text-xs text-gray-500 uppercase tracking-wide">Contact Person</p>
               <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.contact_name || "—"}</p>
             </div>
+            {quotation.address && (
+              <div className="sm:col-span-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Address</p>
+                <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.address}</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide">Email Address</p>
-              <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.email}</p>
+              <div className="mt-0.5 space-y-0.5">
+                {(quotation.emails ?? [quotation.email]).map((addr, i) => (
+                  <p key={i} className="text-sm font-medium text-gray-800">{addr}</p>
+                ))}
+              </div>
             </div>
+            {quotation.cc_emails?.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">CC</p>
+                <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.cc_emails.join(", ")}</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide">Valid Until</p>
               <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.valid_until || "—"}</p>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import Pagination from "../../components/ui/Pagination";
+import ProductSelect from "../../components/ui/ProductSelect";
 import { useAuth } from "../../context/AuthContext";
 
 const StatusBadge = ({ status }) => {
@@ -66,10 +67,12 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
     },
   });
 
-  const { data: productsData } = useQuery({
-    queryKey: ["products-list"],
+  const { data: catalogsData } = useQuery({
+    queryKey: ["catalogs-for-sale"],
     queryFn: async () => {
-      const response = await api.get("/products");
+      const response = await api.get("/products", {
+        params: { status: "active", per_page: 500 },
+      });
       return response.data;
     },
   });
@@ -85,15 +88,29 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
     setForm({ ...form, items: form.items.filter((_, i) => i !== index) });
   };
 
+  const getTierPrice = (tiers, qty) => {
+    if (!tiers?.length) return "";
+    const n = parseInt(qty) || 1;
+    const tier = tiers.find(
+      (t) => n >= (t.min_qty ?? 1) && (t.max_qty == null || n <= t.max_qty)
+    );
+    return tier?.price ?? tiers[tiers.length - 1]?.price ?? "";
+  };
+
   const updateItem = (index, field, value) => {
     const items = [...form.items];
     items[index][field] = value;
-    // Auto fill unit price from product
     if (field === "product_id") {
-      const product = productsData?.products?.find(
-        (p) => p.id === parseInt(value),
-      );
-      if (product) items[index].unit_price = product.selling_price;
+      const catalog = catalogsData?.products?.find((c) => c.id === parseInt(value));
+      if (catalog) {
+        items[index].unit_price = getTierPrice(catalog.tiers, items[index].quantity || 1);
+      }
+    }
+    if (field === "quantity") {
+      const catalog = catalogsData?.products?.find((c) => c.id === parseInt(items[index].product_id));
+      if (catalog?.tiers?.length) {
+        items[index].unit_price = getTierPrice(catalog.tiers, value);
+      }
     }
     setForm({ ...form, items });
   };
@@ -210,68 +227,76 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
               </button>
             </div>
             <div className="space-y-2">
-              {form.items.map((item, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-12 gap-2 items-center"
-                >
-                  <div className="col-span-5">
-                    <select
-                      value={item.product_id}
-                      onChange={(e) =>
-                        updateItem(index, "product_id", e.target.value)
-                      }
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    >
-                      <option value="">Select Product</option>
-                      {productsData?.products?.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.brand_name} (Stock: {p.stock})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-3">
-                    <input
-                      type="number"
-                      placeholder="Qty"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateItem(index, "quantity", e.target.value)
-                      }
-                      required
-                      min="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <input
-                      type="number"
-                      placeholder="Unit Price"
-                      value={item.unit_price}
-                      onChange={(e) =>
-                        updateItem(index, "unit_price", e.target.value)
-                      }
-                      required
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    {form.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        className="text-red-500 hover:text-red-700 text-lg font-bold"
-                      >
-                        ×
-                      </button>
+              {form.items.map((item, index) => {
+                const selectedCatalog = catalogsData?.products?.find(
+                  (c) => c.id === parseInt(item.product_id)
+                );
+                return (
+                  <div key={index} className="space-y-1.5">
+                    <div className="grid grid-cols-12 gap-2 items-center">
+                      <div className="col-span-5">
+                        <ProductSelect
+                          products={catalogsData?.products?.slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name)) ?? []}
+                          value={item.product_id}
+                          onChange={(id) => updateItem(index, "product_id", id)}
+                          required
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateItem(index, "quantity", e.target.value)
+                          }
+                          required
+                          min="1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="number"
+                          placeholder="Unit Price"
+                          value={item.unit_price}
+                          onChange={(e) =>
+                            updateItem(index, "unit_price", e.target.value)
+                          }
+                          required
+                          min="0"
+                          step="0.01"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        {form.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="text-red-500 hover:text-red-700 text-lg font-bold"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {selectedCatalog?.tiers?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 px-1">
+                        {selectedCatalog.tiers.map((t, ti) => (
+                          <span
+                            key={ti}
+                            className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full"
+                          >
+                            {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-3 text-right">
               <span className="text-sm font-semibold text-gray-700">
