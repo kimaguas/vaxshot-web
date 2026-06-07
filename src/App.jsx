@@ -25,6 +25,12 @@ import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
 // Sales
 import SalesPage from "./pages/sales/SalesPage";
 
+// Quotations
+import QuotationsPage from "./pages/quotations/QuotationsPage";
+
+// Email Templates
+import EmailTemplatesPage from "./pages/email-templates/EmailTemplatesPage";
+
 // Reports
 import ReportsPage from "./pages/reports/ReportsPage";
 
@@ -128,6 +134,22 @@ export default function App() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
         <Route path="sales" element={<SalesPage />} />
+        <Route
+          path="quotations"
+          element={
+            <PermissionRoute permission="view_quotations">
+              <QuotationsPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="email-templates"
+          element={
+            <PermissionRoute permission="view_email_templates">
+              <EmailTemplatesPage />
+            </PermissionRoute>
+          }
+        />
         <Route path="reports" element={<ReportsPage />} />
         <Route
           path="area-codes"

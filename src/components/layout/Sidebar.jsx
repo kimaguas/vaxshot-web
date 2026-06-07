@@ -12,6 +12,8 @@ import {
   MapPin,
   ChevronRight,
   Tag,
+  FileText,
+  Mail,
   X,
 } from "lucide-react";
 
@@ -23,7 +25,9 @@ const navItems = [
   { label: "Customers",       path: "/customers",       icon: Users,           permission: "view_customers" },
   { label: "Purchase Orders", path: "/purchase-orders", icon: ClipboardList,   permission: "view_purchase_orders" },
   { label: "Sales",           path: "/sales",           icon: ShoppingCart,    permission: "view_sales" },
-  { label: "Reports",         path: "/reports",         icon: BarChart3,       permission: "view_reports" },
+  { label: "Quotations",       path: "/quotations",       icon: FileText,     permission: "view_quotations" },
+  { label: "Email Templates",  path: "/email-templates",  icon: Mail,         permission: "view_email_templates" },
+  { label: "Reports",          path: "/reports",          icon: BarChart3,    permission: "view_reports" },
   { label: "Area Codes",      path: "/area-codes",      icon: MapPin,          permission: "view_area_codes" },
   { label: "Users",           path: "/users",           icon: UserCog,         permission: "view_users" },
   { label: "Activity Logs",   path: "/activity-logs",   icon: ClipboardList,   permission: "view_activity_logs" },
