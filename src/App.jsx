@@ -37,6 +37,7 @@ import UsersPage from "./pages/users/UsersPage";
 import ActivityLogsPage from "./pages/activity-logs/ActivityLogsPage";
 import AreaCodesPage from "./pages/area-codes/AreaCodesPage";
 import ProductsPage from "./pages/products/ProductsPage";
+import InventoryPage from "./pages/inventory/InventoryPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -129,6 +130,14 @@ export default function App() {
         />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+        <Route
+          path="inventory"
+          element={
+            <PermissionRoute permission="view_inventory">
+              <InventoryPage />
+            </PermissionRoute>
+          }
+        />
         <Route path="sales" element={<SalesPage />} />
         <Route
           path="quotations"

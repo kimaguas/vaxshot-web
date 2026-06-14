@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 
 const CustomerModal = ({ customer, onClose, onSave }) => {
   const [form, setForm] = useState({
+    customer_id: customer?.customer_id || "",
     name: customer?.name || "",
     address: customer?.address || "",
     barangay: customer?.barangay || "",
@@ -93,6 +94,20 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Customer ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer ID
+            </label>
+            <input
+              type="text"
+              value={form.customer_id}
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+              placeholder="e.g. CUST-001"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -365,6 +380,9 @@ export default function CustomersPage() {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
+                Customer ID
+              </th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Name
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
@@ -387,13 +405,13 @@ export default function CustomersPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                 </td>
               </tr>
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <Users size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-gray-400">No customers found</p>
                 </td>
@@ -404,6 +422,11 @@ export default function CustomersPage() {
                   key={customer.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-mono text-blue-700 font-medium">
+                      {customer.customer_id || "—"}
+                    </p>
+                  </td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-medium text-gray-800">
                       {customer.name}

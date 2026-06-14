@@ -9,13 +9,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      const savedUser = localStorage.getItem("user");
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+    // Seed from localStorage immediately so UI doesn't flicker
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) setUser(JSON.parse(savedUser));
+
+    // Refresh from API to get latest permissions
+    api.get("/auth/me")
+      .then((res) => {
+        setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, [token]);
 
   const login = async (login, password) => {

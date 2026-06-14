@@ -150,7 +150,7 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
                 <option value="">Select Customer</option>
                 {customersData?.customers?.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.customer_id ? `[${c.customer_id}] ${c.name}` : c.name}
                   </option>
                 ))}
               </select>

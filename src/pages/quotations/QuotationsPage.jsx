@@ -178,7 +178,6 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
     emails:         parseEmails(initial?.emails ?? initial?.email),
     cc_emails:      Array.isArray(initial?.cc_emails) && initial.cc_emails.length ? initial.cc_emails : [],
     quotation_date: initial?.quotation_date ?? new Date().toISOString().split("T")[0],
-    valid_until:    initial?.valid_until    ?? "",
     notes:          initial?.notes          ?? "",
     items: initial?.items?.length
       ? initial.items.map((i) => ({
@@ -400,22 +399,13 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
                 </div>
               )}
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Quotation Date *</label>
               <input
                 type="date"
                 value={form.quotation_date}
                 onChange={(e) => setForm({ ...form, quotation_date: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Valid Until</label>
-              <input
-                type="date"
-                value={form.valid_until}
-                onChange={(e) => setForm({ ...form, valid_until: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
@@ -606,10 +596,6 @@ const ViewQuotationModal = ({ quotation, onClose, onEdit, onDelete, onSendClick,
                 <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.cc_emails.join(", ")}</p>
               </div>
             )}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Valid Until</p>
-              <p className="text-sm font-medium text-gray-800 mt-0.5">{quotation.valid_until || "—"}</p>
-            </div>
             {quotation.notes && (
               <div className="sm:col-span-2">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Notes</p>
