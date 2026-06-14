@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Plus, Search, Eye, ClipboardList, CheckCircle } from "lucide-react";
+import { Plus, Search, Eye, ClipboardList, CheckCircle, Pencil, X } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
 
@@ -17,7 +17,7 @@ const StatusBadge = ({ status }) => {
   };
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] || colors.draft}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${colors[status] || colors.draft}`}
     >
       {status}
     </span>
@@ -304,9 +304,28 @@ const CreatePOModal = ({ onClose, onSave }) => {
 };
 
 // View PO Modal
-const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
+const ViewPOModal = ({ po, onClose, onConfirm, onCancel, onReceive, onUpdate, isUpdating }) => {
   const { hasPermission } = useAuth();
   const [showReceiveForm, setShowReceiveForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [editForm, setEditForm] = useState({
+    expected_delivery_date: po.expected_delivery_date || "",
+    notes: po.notes || "",
+    items: po.items?.map((item) => ({
+      id: item.id,
+      brand_name: item.brand_name,
+      quantity_ordered: item.quantity_ordered,
+      unit_cost: item.unit_cost,
+    })) || [],
+  });
+
+  const handleEdit = (e) => {
+    e.preventDefault();
+    onUpdate(po.id, editForm);
+    setShowEditForm(false);
+  };
+
   const [receiptForm, setReceiptForm] = useState({
     receipt_date: new Date().toISOString().split("T")[0],
     notes: "",
@@ -337,10 +356,114 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
             </h3>
             <p className="text-sm text-gray-500">{po.supplier}</p>
           </div>
-          <StatusBadge status={po.status} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={po.status} />
+            {po.status === "draft" && hasPermission("create_purchase_orders") && (
+              <button
+                onClick={() => setShowEditForm(!showEditForm)}
+                title="Edit purchase order"
+                className={`p-1.5 rounded-lg transition-colors ${
+                  showEditForm
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              >
+                {showEditForm ? <X size={16} /> : <Pencil size={16} />}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="p-6 space-y-4">
+
+          {/* Inline Edit Form */}
+          {showEditForm && (
+            <form
+              onSubmit={handleEdit}
+              className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-3"
+            >
+              <h4 className="text-sm font-semibold text-blue-700">Edit Purchase Order</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Expected Delivery</label>
+                  <input
+                    type="date"
+                    value={editForm.expected_delivery_date}
+                    onChange={(e) => setEditForm({ ...editForm, expected_delivery_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                  <input
+                    type="text"
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Items</label>
+                <div className="space-y-2">
+                  {editForm.items.map((item, idx) => (
+                    <div key={item.id} className="border border-gray-200 bg-white rounded-lg px-3 py-2 grid grid-cols-12 gap-2 items-center">
+                      <span className="col-span-5 text-sm text-gray-700">{item.brand_name}</span>
+                      <div className="col-span-3">
+                        <label className="block text-xs text-gray-500 mb-0.5">Qty Ordered</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity_ordered}
+                          onChange={(e) => {
+                            const items = [...editForm.items];
+                            items[idx] = { ...items[idx], quantity_ordered: e.target.value };
+                            setEditForm({ ...editForm, items });
+                          }}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <label className="block text-xs text-gray-500 mb-0.5">Unit Cost</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unit_cost}
+                          onChange={(e) => {
+                            const items = [...editForm.items];
+                            items[idx] = { ...items[idx], unit_cost: e.target.value };
+                            setEditForm({ ...editForm, items });
+                          }}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditForm(false)}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isUpdating && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {isUpdating ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* PO Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
@@ -529,6 +652,36 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
             </form>
           )}
 
+          {/* Cancel Confirmation */}
+          {showCancelConfirm && (
+            <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <X size={20} className="text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">Cancel this purchase order?</p>
+                  <p className="text-xs text-red-500 mt-0.5">
+                    PO <span className="font-medium">{po.po_number}</span> will be marked as cancelled. This cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={() => { setShowCancelConfirm(false); onCancel(po.id); }}
+                  className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5"
+                >
+                  <X size={14} />
+                  Yes, Cancel Order
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
@@ -538,13 +691,22 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
               Close
             </button>
             {po.status === "draft" && hasPermission("create_purchase_orders") && (
-              <button
-                onClick={() => onConfirm(po.id)}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
-              >
-                <CheckCircle size={16} />
-                Confirm Order
-              </button>
+              <>
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm flex items-center justify-center gap-2"
+                >
+                  <X size={16} />
+                  Cancel Order
+                </button>
+                <button
+                  onClick={() => onConfirm(po.id)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={16} />
+                  Confirm Order
+                </button>
+              </>
             )}
             {["ordered", "partial"].includes(po.status) && hasPermission("receive_purchase_orders") && (
               <button
@@ -590,6 +752,17 @@ export default function PurchaseOrdersPage() {
       toast.error(err.response?.data?.message || "Failed to create PO"),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (id) => api.put(`/purchase-orders/${id}`, { status: "cancelled" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["purchase-orders"]);
+      toast.success("Purchase Order cancelled.");
+      setSelectedPO(null);
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to cancel PO"),
+  });
+
   const confirmMutation = useMutation({
     mutationFn: (id) =>
       api.put(`/purchase-orders/${id}`, { status: "ordered" }),
@@ -600,6 +773,20 @@ export default function PurchaseOrdersPage() {
     },
     onError: (err) =>
       toast.error(err.response?.data?.message || "Failed to confirm PO"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/purchase-orders/${id}`, data),
+    onSuccess: async (_, { id }) => {
+      queryClient.invalidateQueries(["purchase-orders"]);
+      toast.success("Purchase Order updated!");
+      try {
+        const res = await api.get(`/purchase-orders/${id}`);
+        setSelectedPO(res.data.purchase_order);
+      } catch {}
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to update PO"),
   });
 
   const receiveMutation = useMutation({
@@ -698,7 +885,12 @@ export default function PurchaseOrdersPage() {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4 text-sm font-medium text-blue-600">
-                    {order.po_number}
+                    <button
+                      onClick={() => setSelectedPO(order)}
+                      className="hover:underline"
+                    >
+                      {order.po_number}
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-800">
                     {order.supplier}
@@ -745,7 +937,10 @@ export default function PurchaseOrdersPage() {
           po={selectedPO}
           onClose={() => setSelectedPO(null)}
           onConfirm={(id) => confirmMutation.mutate(id)}
+          onCancel={(id) => cancelMutation.mutate(id)}
           onReceive={(poId, data) => receiveMutation.mutate({ poId, data })}
+          onUpdate={(id, data) => updateMutation.mutate({ id, data })}
+          isUpdating={updateMutation.isPending}
         />
       )}
     </div>

@@ -7,7 +7,7 @@ import { Plus, Search, Edit, Trash2, Users } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
 
-const CustomerModal = ({ customer, onClose, onSave }) => {
+const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError }) => {
   const [form, setForm] = useState({
     customer_id: customer?.customer_id || "",
     name: customer?.name || "",
@@ -102,10 +102,16 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
             <input
               type="text"
               value={form.customer_id}
-              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, customer_id: e.target.value });
+                onClearError?.("customer_id");
+              }}
               placeholder="e.g. CUST-001"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.customer_id ? "border-red-400" : "border-gray-300"}`}
             />
+            {errors.customer_id && (
+              <p className="text-red-500 text-xs mt-1">{errors.customer_id[0]}</p>
+            )}
           </div>
 
           {/* Name */}
@@ -287,6 +293,7 @@ export default function CustomersPage() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
+  const [formErrors, setFormErrors] = useState({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["customers", search, page],
@@ -303,10 +310,17 @@ export default function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(["customers"]);
       toast.success("Customer created successfully!");
+      setFormErrors({});
       setShowModal(false);
     },
-    onError: (err) =>
-      toast.error(err.response?.data?.message || "Failed to create customer"),
+    onError: (err) => {
+      const fieldErrors = err.response?.data?.errors;
+      if (fieldErrors) {
+        setFormErrors(fieldErrors);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to create customer");
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -314,11 +328,18 @@ export default function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(["customers"]);
       toast.success("Customer updated successfully!");
+      setFormErrors({});
       setShowModal(false);
       setSelected(null);
     },
-    onError: (err) =>
-      toast.error(err.response?.data?.message || "Failed to update customer"),
+    onError: (err) => {
+      const fieldErrors = err.response?.data?.errors;
+      if (fieldErrors) {
+        setFormErrors(fieldErrors);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update customer");
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -423,14 +444,20 @@ export default function CustomersPage() {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <p className="text-sm font-mono text-blue-700 font-medium">
+                    <button
+                      onClick={() => { setSelected(customer); setShowModal(true); }}
+                      className="text-sm font-mono text-blue-700 font-medium hover:underline"
+                    >
                       {customer.customer_id || "—"}
-                    </p>
+                    </button>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-gray-800">
+                    <button
+                      onClick={() => { setSelected(customer); setShowModal(true); }}
+                      className="text-sm font-medium text-gray-800 hover:text-blue-600 hover:underline text-left"
+                    >
                       {customer.name}
-                    </p>
+                    </button>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-600 truncate max-w-xs">
@@ -496,8 +523,11 @@ export default function CustomersPage() {
           onClose={() => {
             setShowModal(false);
             setSelected(null);
+            setFormErrors({});
           }}
           onSave={handleSave}
+          errors={formErrors}
+          onClearError={(field) => setFormErrors((prev) => ({ ...prev, [field]: undefined }))}
         />
       )}
     </div>

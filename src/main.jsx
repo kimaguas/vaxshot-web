@@ -23,12 +23,27 @@ createRoot(document.getElementById("root")).render(
         <AuthProvider>
           <App />
           <Toaster
-            position="top-right"
+            position="top-center"
             toastOptions={{
-              duration: 3000,
+              duration: 4000,
               style: {
-                background: "#363636",
-                color: "#fff",
+                borderRadius: "8px",
+                padding: "12px 18px",
+                fontSize: "14px",
+                fontWeight: "500",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+                minWidth: "280px",
+                maxWidth: "420px",
+              },
+              success: {
+                duration: 3500,
+                style: { background: "#16a34a", color: "#fff" },
+                iconTheme: { primary: "#fff", secondary: "#16a34a" },
+              },
+              error: {
+                duration: 5000,
+                style: { background: "#dc2626", color: "#fff" },
+                iconTheme: { primary: "#fff", secondary: "#dc2626" },
               },
             }}
           />

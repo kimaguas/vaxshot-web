@@ -1,9 +1,24 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { Plus, Pencil, Trash2, X, Star, Mail } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
+
+const BODY_TOOLBAR = [
+  [{ header: [1, 2, 3, false] }],
+  ["bold", "italic", "underline", "strike"],
+  [{ list: "ordered" }, { list: "bullet" }],
+  ["link", "clean"],
+];
+const SIG_TOOLBAR    = [["bold", "italic", "underline"], ["link", "clean"]];
+const HEADER_TOOLBAR = [
+  ["bold", "italic", "underline"],
+  [{ align: [] }, { color: [] }],
+  ["link", "clean"],
+];
 
 const CATEGORIES = [
   { value: "companies",            label: "Companies" },
@@ -22,13 +37,16 @@ const EmailTemplateModal = ({ onClose, onSave, isPending, initial }) => {
   const isEdit = !!initial;
 
   const [form, setForm] = useState({
-    name:       initial?.name       ?? "",
-    category:   initial?.category   ?? "companies",
-    subject:    initial?.subject    ?? "",
-    body:       initial?.body       ?? "",
-    signature:  initial?.signature  ?? "",
-    is_default: initial?.is_default ?? false,
+    name:        initial?.name        ?? "",
+    category:    initial?.category    ?? "companies",
+    subject:     initial?.subject     ?? "",
+    body:        initial?.body        ?? "",
+    signature:   initial?.signature   ?? "",
+    is_default:  initial?.is_default  ?? false,
+    header_html: initial?.header_html ?? "",
   });
+
+  const headerModules = useMemo(() => ({ toolbar: HEADER_TOOLBAR }), []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -94,16 +112,35 @@ const EmailTemplateModal = ({ onClose, onSave, isPending, initial }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Header
+            </label>
+            <p className="text-xs text-gray-400 mb-2">
+              Customize the header shown at the top of the email (logo, company name, etc.). Leave empty to use the default Vaxshot header.
+            </p>
+            <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+              <ReactQuill
+                theme="snow"
+                value={form.header_html}
+                onChange={(val) => setForm({ ...form, header_html: val })}
+                modules={headerModules}
+                style={{ minHeight: "120px" }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Email Body *
             </label>
-            <textarea
-              value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-              required
-              rows={10}
-              placeholder="Write the email body here..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono resize-y"
-            />
+            <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+              <ReactQuill
+                theme="snow"
+                value={form.body}
+                onChange={(val) => setForm({ ...form, body: val })}
+                modules={{ toolbar: BODY_TOOLBAR }}
+                style={{ minHeight: "200px" }}
+              />
+            </div>
             <p className="mt-1 text-xs text-gray-400">
               Available placeholders:{" "}
               <code className="bg-gray-100 px-1 rounded">{"{customer_name}"}</code>{" "}
@@ -117,14 +154,15 @@ const EmailTemplateModal = ({ onClose, onSave, isPending, initial }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Signature *
             </label>
-            <textarea
-              value={form.signature}
-              onChange={(e) => setForm({ ...form, signature: e.target.value })}
-              required
-              rows={4}
-              placeholder={"Kim Harold Aguas\nVaxshot Pharmaceutical Products Trading\nAccount Manager\n0968-408-8401"}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono resize-y"
-            />
+            <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+              <ReactQuill
+                theme="snow"
+                value={form.signature}
+                onChange={(val) => setForm({ ...form, signature: val })}
+                modules={{ toolbar: SIG_TOOLBAR }}
+                style={{ minHeight: "100px" }}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -167,9 +205,10 @@ export default function EmailTemplatesPage() {
   const { hasPermission } = useAuth();
   const queryClient = useQueryClient();
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [editTarget, setEditTarget] = useState(null);
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [showCreate, setShowCreate]           = useState(false);
+  const [editTarget, setEditTarget]           = useState(null);
+  const [categoryFilter, setCategoryFilter]   = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["email-templates"],
@@ -215,9 +254,8 @@ export default function EmailTemplatesPage() {
     },
   });
 
-  const handleDelete = (template) => {
-    if (!window.confirm(`Delete template "${template.name}"?`)) return;
-    deleteMutation.mutate(template.id);
+  const handleDelete = (id) => {
+    deleteMutation.mutate(id);
   };
 
   const allTemplates = data?.templates ?? [];
@@ -295,50 +333,88 @@ export default function EmailTemplatesPage() {
                 </tr>
               ) : (
                 filtered.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-800">{t.name}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        {categoryLabel(t.category)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600 truncate block max-w-xs">{t.subject}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {t.is_default && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                          <Star size={10} fill="currentColor" />
-                          Default
+                  deleteConfirmId === t.id ? (
+                    <tr key={t.id}>
+                      <td colSpan={5} className="px-6 py-4">
+                        <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-semibold text-red-700">Delete this template?</p>
+                              <p className="text-xs text-red-500 mt-0.5">
+                                <span className="font-medium">"{t.name}"</span> will be permanently deleted. This cannot be undone.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+                            >
+                              Keep Template
+                            </button>
+                            <button
+                              onClick={() => { setDeleteConfirmId(null); handleDelete(t.id); }}
+                              disabled={deleteMutation.isPending}
+                              className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                              Yes, Delete
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => setEditTarget(t)}
+                          className="text-sm font-medium text-blue-600 hover:underline text-left"
+                        >
+                          {t.name}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          {categoryLabel(t.category)}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {hasPermission("edit_email_templates") && (
-                          <button
-                            onClick={() => setEditTarget(t)}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit template"
-                          >
-                            <Pencil size={15} />
-                          </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600 truncate block max-w-xs">{t.subject}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {t.is_default && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                            <Star size={10} fill="currentColor" />
+                            Default
+                          </span>
                         )}
-                        {hasPermission("delete_email_templates") && (
-                          <button
-                            onClick={() => handleDelete(t)}
-                            disabled={deleteMutation.isPending}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete template"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {hasPermission("edit_email_templates") && (
+                            <button
+                              onClick={() => setEditTarget(t)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit template"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          )}
+                          {hasPermission("delete_email_templates") && (
+                            <button
+                              onClick={() => setDeleteConfirmId(t.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete template"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
                 ))
               )}
             </tbody>

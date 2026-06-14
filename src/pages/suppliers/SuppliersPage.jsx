@@ -6,7 +6,7 @@ import { Plus, Search, Edit, Trash2, Truck } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
 
-const SupplierModal = ({ supplier, onClose, onSave }) => {
+const SupplierModal = ({ supplier, onClose, onSave, errors = {}, onClearError }) => {
   const [form, setForm] = useState({
     tin_no: supplier?.tin_no || "",
     company: supplier?.company || "",
@@ -39,10 +39,18 @@ const SupplierModal = ({ supplier, onClose, onSave }) => {
               <input
                 type="text"
                 value={form.company}
-                onChange={(e) => setForm({ ...form, company: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, company: e.target.value });
+                  if (errors.company) onClearError("company");
+                }}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.company ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.company && (
+                <p className="mt-1 text-xs text-red-600">{errors.company[0]}</p>
+              )}
             </div>
 
             <div>
@@ -141,6 +149,7 @@ export default function SuppliersPage() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
+  const [formErrors, setFormErrors] = useState({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["suppliers", search, page],
@@ -157,10 +166,17 @@ export default function SuppliersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(["suppliers"]);
       toast.success("Supplier created successfully!");
+      setFormErrors({});
       setShowModal(false);
     },
-    onError: (err) =>
-      toast.error(err.response?.data?.message || "Failed to create supplier"),
+    onError: (err) => {
+      const fieldErrors = err.response?.data?.errors;
+      if (fieldErrors) {
+        setFormErrors(fieldErrors);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to create supplier");
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -168,11 +184,18 @@ export default function SuppliersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(["suppliers"]);
       toast.success("Supplier updated successfully!");
+      setFormErrors({});
       setShowModal(false);
       setSelected(null);
     },
-    onError: (err) =>
-      toast.error(err.response?.data?.message || "Failed to update supplier"),
+    onError: (err) => {
+      const fieldErrors = err.response?.data?.errors;
+      if (fieldErrors) {
+        setFormErrors(fieldErrors);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update supplier");
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -275,9 +298,12 @@ export default function SuppliersPage() {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-gray-800">
+                    <button
+                      onClick={() => { setSelected(supplier); setShowModal(true); }}
+                      className="text-sm font-medium text-blue-600 hover:underline text-left"
+                    >
                       {supplier.company}
-                    </p>
+                    </button>
                     {supplier.address && (
                       <p className="text-xs text-gray-500 truncate max-w-xs">
                         {supplier.address}
@@ -346,8 +372,11 @@ export default function SuppliersPage() {
           onClose={() => {
             setShowModal(false);
             setSelected(null);
+            setFormErrors({});
           }}
           onSave={handleSave}
+          errors={formErrors}
+          onClearError={(field) => setFormErrors((prev) => ({ ...prev, [field]: undefined }))}
         />
       )}
     </div>

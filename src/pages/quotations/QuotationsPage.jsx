@@ -11,6 +11,7 @@ import {
   Trash2,
   Pencil,
   X,
+  LayoutTemplate,
 } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import ProductSelect from "../../components/ui/ProductSelect";
@@ -27,6 +28,396 @@ const StatusBadge = ({ status }) => {
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${colors[status] || colors.draft}`}>
       {status}
     </span>
+  );
+};
+
+// ─── Template Form Modal ──────────────────────────────────────────────────────
+const TemplateFormModal = ({ initial, onClose, onSave, isPending, products }) => {
+  const isEdit = !!initial;
+  const [form, setForm] = useState({
+    name:        initial?.name        ?? "",
+    description: initial?.description ?? "",
+    items: initial?.items?.length
+      ? initial.items.map((i) => ({
+          product_id:  String(i.product_id),
+          quantity:    String(i.quantity),
+          unit_price:  String(i.unit_price),
+        }))
+      : [{ product_id: "", quantity: "", unit_price: "" }],
+  });
+
+  const getTierPrice = (tiers, qty) => {
+    if (!tiers?.length) return "";
+    const n = parseInt(qty) || 1;
+    const tier = tiers.find((t) => n >= (t.min_qty ?? 1) && (t.max_qty == null || n <= t.max_qty));
+    return tier?.price ?? tiers[tiers.length - 1]?.price ?? "";
+  };
+
+  const addItem = () =>
+    setForm({ ...form, items: [...form.items, { product_id: "", quantity: "", unit_price: "" }] });
+
+  const removeItem = (idx) => {
+    if (form.items.length === 1) return;
+    setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
+  };
+
+  const updateItem = (idx, field, value) => {
+    const items = [...form.items];
+    items[idx][field] = value;
+    if (field === "product_id") {
+      const catalog = products.find((p) => p.id === parseInt(value));
+      if (catalog?.tiers?.length) {
+        items[idx].quantity   = String(catalog.tiers[0].min_qty ?? 1);
+        items[idx].unit_price = String(catalog.tiers[0].price);
+      } else {
+        items[idx].quantity   = "";
+        items[idx].unit_price = "";
+      }
+    }
+    if (field === "quantity") {
+      const catalog = products.find((p) => p.id === parseInt(items[idx].product_id));
+      if (catalog?.tiers?.length) {
+        items[idx].unit_price = getTierPrice(catalog.tiers, value);
+      }
+    }
+    setForm({ ...form, items });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(form);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-70 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-800">
+            {isEdit ? "Edit Template" : "New Quotation Template"}
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Template Name *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              placeholder="e.g. Standard HPV Package"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description <span className="text-gray-400 font-normal text-xs">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Brief description of this template"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">Products *</label>
+              <button type="button" onClick={addItem} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                + Add Item
+              </button>
+            </div>
+            <div className="space-y-3">
+              {form.items.map((item, idx) => {
+                const catalog = products.find((p) => p.id === parseInt(item.product_id));
+                const tiers = catalog?.tiers ?? [];
+                const activeTierIdx = tiers.findIndex((t) => {
+                  const n = parseInt(item.quantity) || 0;
+                  return n >= (t.min_qty ?? 1) && (t.max_qty == null || n <= t.max_qty);
+                });
+                const lineTotal = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+
+                return (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-3 space-y-2.5">
+                    {/* Product select + remove */}
+                    <div className="flex gap-2 items-center">
+                      <ProductSelect
+                        products={products}
+                        value={item.product_id}
+                        onChange={(id) => updateItem(idx, "product_id", id)}
+                        required
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(idx)}
+                        disabled={form.items.length === 1}
+                        className="p-2 text-red-400 hover:text-red-600 disabled:opacity-30"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Tier pills */}
+                    {tiers.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {tiers.map((t, ti) => {
+                          const isActive = ti === activeTierIdx;
+                          const range = t.max_qty
+                            ? `${t.min_qty}–${t.max_qty} units`
+                            : `${t.min_qty}+ units`;
+                          return (
+                            <button
+                              key={ti}
+                              type="button"
+                              onClick={() => {
+                                const items = [...form.items];
+                                items[idx].quantity   = String(t.min_qty ?? 1);
+                                items[idx].unit_price = String(t.price);
+                                setForm({ ...form, items });
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                                isActive
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
+                              }`}
+                            >
+                              {t.tier_label}: ₱{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })} · {range}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Qty + Price + Total */}
+                    <div className="flex gap-2 items-end">
+                      <div className="w-24">
+                        <label className="block text-xs text-gray-500 mb-0.5">Qty</label>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                          required
+                          min="1"
+                          placeholder="Qty"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-xs text-gray-500 mb-0.5">Unit Price</label>
+                        <input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(idx, "unit_price", e.target.value)}
+                          required
+                          min="0"
+                          step="0.01"
+                          placeholder="Price"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="flex-1 py-2 text-right text-sm font-semibold text-gray-700">
+                        ₱{lineTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
+              Cancel
+            </button>
+            <button type="submit" disabled={isPending} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-60">
+              {isPending ? "Saving..." : isEdit ? "Update Template" : "Save Template"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ─── Template Manager Modal ───────────────────────────────────────────────────
+const TemplateManagerModal = ({ onClose }) => {
+  const queryClient = useQueryClient();
+  const [formTarget, setFormTarget]         = useState(null);
+  const [showNew, setShowNew]               = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const { data: productsData } = useQuery({
+    queryKey: ["products-for-template"],
+    queryFn: async () => {
+      const res = await api.get("/products", { params: { status: "active", per_page: 500 } });
+      return res.data;
+    },
+  });
+  const products = (productsData?.products ?? []).slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name));
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["quotation-templates"],
+    queryFn: async () => {
+      const res = await api.get("/quotation-templates");
+      return res.data;
+    },
+  });
+  const templates = data?.templates ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: (data) => api.post("/quotation-templates", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["quotation-templates"]);
+      toast.success("Template created!");
+      setShowNew(false);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to create template"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/quotation-templates/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["quotation-templates"]);
+      toast.success("Template updated!");
+      setFormTarget(null);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to update template"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/quotation-templates/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["quotation-templates"]);
+      toast.success("Template deleted!");
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to delete template"),
+  });
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <LayoutTemplate size={18} className="text-blue-600" />
+              Quotation Templates
+            </h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+          </div>
+
+          <div className="p-6 space-y-3">
+            <button
+              onClick={() => setShowNew(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            >
+              <Plus size={15} />
+              New Template
+            </button>
+
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-gray-400">Loading templates...</p>
+              </div>
+            ) : templates.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm">
+                No templates yet. Create one to get started.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {templates.map((tpl) => (
+                  <div key={tpl.id}>
+                    {deleteConfirmId === tpl.id ? (
+                      <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-700">Delete this template?</p>
+                            <p className="text-xs text-red-500 mt-0.5">
+                              <span className="font-medium">"{tpl.name}"</span> will be permanently deleted. This cannot be undone.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+                          >
+                            Keep Template
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirmId(null); deleteMutation.mutate(tpl.id); }}
+                            disabled={deleteMutation.isPending}
+                            className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Yes, Delete
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg p-4 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{tpl.name}</p>
+                          {tpl.description && (
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{tpl.description}</p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">{tpl.items.length} item{tpl.items.length !== 1 ? "s" : ""}</p>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => setFormTarget(tpl)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(tpl.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-gray-200">
+            <button onClick={onClose} className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showNew && (
+        <TemplateFormModal
+          products={products}
+          onClose={() => setShowNew(false)}
+          onSave={(data) => createMutation.mutate(data)}
+          isPending={createMutation.isPending}
+        />
+      )}
+
+      {formTarget && (
+        <TemplateFormModal
+          initial={formTarget}
+          products={products}
+          onClose={() => setFormTarget(null)}
+          onSave={(data) => updateMutation.mutate({ id: formTarget.id, data })}
+          isPending={updateMutation.isPending}
+        />
+      )}
+    </>
   );
 };
 
@@ -100,6 +491,18 @@ const SendEmailModal = ({ quotation, onClose, onSend, isSending }) => {
 
           {selected && (
             <>
+              {selected.header_html && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                    Header Preview
+                  </label>
+                  <div
+                    className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: selected.header_html }}
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Subject Preview
@@ -113,19 +516,20 @@ const SendEmailModal = ({ quotation, onClose, onSend, isSending }) => {
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Body Preview
                 </label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
-                  {resolvePlaceholders(selected.body).slice(0, 400)}
-                  {selected.body.length > 400 ? "…" : ""}
-                </div>
+                <div
+                  className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 max-h-32 overflow-y-auto prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: resolvePlaceholders(selected.body) }}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                   Signature
                 </label>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 whitespace-pre-wrap">
-                  {selected.signature}
-                </div>
+                <div
+                  className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: selected.signature }}
+                />
               </div>
             </>
           )}
@@ -164,6 +568,17 @@ const SendEmailModal = ({ quotation, onClose, onSend, isSending }) => {
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
 const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
   const isEdit = !!initial;
+  const [loadTemplateId, setLoadTemplateId] = useState("");
+
+  const { data: templatesData } = useQuery({
+    queryKey: ["quotation-templates"],
+    queryFn: async () => {
+      const res = await api.get("/quotation-templates");
+      return res.data;
+    },
+    enabled: !isEdit,
+  });
+  const availableTemplates = templatesData?.templates ?? [];
 
   const parseEmails = (val) => {
     if (Array.isArray(val)) return val.length ? val : [""];
@@ -224,9 +639,15 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
     if (field === "product_id") {
       const catalog = catalogsData?.products?.find((c) => c.id === parseInt(value));
       if (catalog) {
-        items[index].unit_price  = getTierPrice(catalog.tiers, items[index].quantity || 1);
         items[index].description = catalog.indication  ?? "";
         items[index].expiry_date = catalog.expiry_date ?? "";
+        if (catalog.tiers?.length) {
+          items[index].quantity   = String(catalog.tiers[0].min_qty ?? 1);
+          items[index].unit_price = String(catalog.tiers[0].price);
+        } else {
+          items[index].quantity   = "";
+          items[index].unit_price = "";
+        }
       }
     }
     if (field === "quantity") {
@@ -420,6 +841,43 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
             </div>
           </div>
 
+          {/* Load Template (create mode only) */}
+          {!isEdit && availableTemplates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Load Template <span className="text-gray-400 font-normal text-xs">(optional — replaces current items)</span>
+              </label>
+              <select
+                value={loadTemplateId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setLoadTemplateId(id);
+                  if (!id) return;
+                  const tpl = availableTemplates.find((t) => String(t.id) === id);
+                  if (!tpl) return;
+                  setForm((prev) => ({
+                    ...prev,
+                    items: tpl.items.map((i) => ({
+                      product_id:  String(i.product_id),
+                      quantity:    String(i.quantity),
+                      unit_price:  String(i.unit_price),
+                      description: i.description ?? "",
+                      expiry_date: "",
+                    })),
+                  }));
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              >
+                <option value="">— Load a template —</option>
+                {availableTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.items.length} item{t.items.length !== 1 ? "s" : ""})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Products */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -430,91 +888,101 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
             </div>
 
             <div className="space-y-3">
-              {form.items.map((item, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2">
-                  {/* Row 1: product, qty, price, total, remove */}
-                  <div className="flex gap-2 items-center">
-                    <ProductSelect
-                      products={catalogsData?.products?.slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name)) ?? []}
-                      value={item.product_id}
-                      onChange={(id) => updateItem(index, "product_id", id)}
-                      required
-                      className="flex-1"
-                    />
-                    <div className="w-20">
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                        required
-                        min="1"
-                        placeholder="Qty"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      />
-                    </div>
-                    <div className="w-28">
-                      <input
-                        type="number"
-                        value={item.unit_price}
-                        onChange={(e) => updateItem(index, "unit_price", e.target.value)}
-                        required
-                        min="0"
-                        step="0.01"
-                        placeholder="Price"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      />
-                    </div>
-                    <div className="w-28 py-2 px-2 text-sm text-gray-600 font-medium text-right whitespace-nowrap">
-                      ₱{((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      disabled={form.items.length === 1}
-                      className="p-2 text-red-400 hover:text-red-600 disabled:opacity-30"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+              {form.items.map((item, index) => {
+                const catalog = catalogsData?.products?.find((c) => c.id === parseInt(item.product_id));
+                const tiers = catalog?.tiers ?? [];
+                const activeTierIdx = tiers.findIndex((t) => {
+                  const n = parseInt(item.quantity) || 0;
+                  return n >= (t.min_qty ?? 1) && (t.max_qty == null || n <= t.max_qty);
+                });
+                const lineTotal = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
 
-                  {/* Tier reference badges */}
-                  {item.product_id && (() => {
-                    const cat = catalogsData?.products?.find(c => c.id === parseInt(item.product_id));
-                    return cat?.tiers?.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 px-1">
-                        {cat.tiers.map((t, ti) => (
-                          <span key={ti} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
-                            {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                          </span>
-                        ))}
+                return (
+                  <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2.5">
+                    {/* Product select + remove */}
+                    <div className="flex gap-2 items-center">
+                      <ProductSelect
+                        products={catalogsData?.products?.slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name)) ?? []}
+                        value={item.product_id}
+                        onChange={(id) => updateItem(index, "product_id", id)}
+                        required
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        disabled={form.items.length === 1}
+                        className="p-2 text-red-400 hover:text-red-600 disabled:opacity-30"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Tier pills — click to apply */}
+                    {tiers.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {tiers.map((t, ti) => {
+                          const isActive = ti === activeTierIdx;
+                          const range = t.max_qty
+                            ? `${t.min_qty}–${t.max_qty} units`
+                            : `${t.min_qty}+ units`;
+                          return (
+                            <button
+                              key={ti}
+                              type="button"
+                              onClick={() => {
+                                const items = [...form.items];
+                                items[index].quantity   = String(t.min_qty ?? 1);
+                                items[index].unit_price = String(t.price);
+                                setForm({ ...form, items });
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                                isActive
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
+                              }`}
+                            >
+                              {t.tier_label}: ₱{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })} · {range}
+                            </button>
+                          );
+                        })}
                       </div>
-                    ) : null;
-                  })()}
+                    )}
 
-                  {/* Row 2: indication + expiry (auto-filled) */}
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={item.description}
-                        readOnly
-                        placeholder="Indication / Type (auto-filled)"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
-                      />
-                    </div>
-                    <div className="w-40">
-                      <input
-                        type="text"
-                        value={item.expiry_date}
-                        readOnly
-                        placeholder="Expiry (auto-filled)"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
-                        title="Expiry Date — set in Supplier Pricing"
-                      />
+                    {/* Qty + Price + Total */}
+                    <div className="flex gap-2 items-end">
+                      <div className="w-24">
+                        <label className="block text-xs text-gray-500 mb-0.5">Qty</label>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                          required
+                          min="1"
+                          placeholder="Qty"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-xs text-gray-500 mb-0.5">Unit Price</label>
+                        <input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(index, "unit_price", e.target.value)}
+                          required
+                          min="0"
+                          step="0.01"
+                          placeholder="Price"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <div className="flex-1 py-2 text-right text-sm font-semibold text-gray-700">
+                        ₱{lineTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex justify-end mt-3 pt-3 border-t border-gray-200">
@@ -549,6 +1017,7 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
 // ─── View Modal ───────────────────────────────────────────────────────────────
 const ViewQuotationModal = ({ quotation, onClose, onEdit, onDelete, onSendClick, isDeleting }) => {
   const { hasPermission } = useAuth();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -611,62 +1080,109 @@ const ViewQuotationModal = ({ quotation, onClose, onEdit, onDelete, onSendClick,
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-3 py-2 text-xs font-semibold text-gray-600">Product</th>
-                    <th className="text-left px-3 py-2 text-xs font-semibold text-gray-600">Indication</th>
-                    <th className="text-right px-3 py-2 text-xs font-semibold text-gray-600">Price</th>
-                    <th className="text-right px-3 py-2 text-xs font-semibold text-gray-600">Expiry</th>
+                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Product Name</th>
+                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Indication</th>
+                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Price</th>
+                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Expiration Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {quotation.items?.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-3 py-2 font-medium text-gray-800">{item.product_name}</td>
-                      <td className="px-3 py-2 text-gray-500 text-xs">{item.description || "—"}</td>
-                      <td className="px-3 py-2 text-right text-gray-700">
-                        ₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                    <tr key={item.id} className="align-top">
+                      <td className="px-3 py-3 font-semibold text-gray-800 text-sm">{item.product_name}</td>
+                      <td className="px-3 py-3">
+                        {item.supplier_name && (
+                          <p className="text-sm font-medium text-gray-800">{item.supplier_name}/</p>
+                        )}
+                        <p className="text-sm text-gray-600">{item.description || (item.supplier_name ? "" : "—")}</p>
                       </td>
-                      <td className="px-3 py-2 text-right text-gray-500 text-xs">{item.expiry_date || "—"}</td>
+                      <td className="px-3 py-3">
+                        {item.tiers?.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {item.tiers.map((t, i) => {
+                              const range = t.max_qty
+                                ? `${t.min_qty}-${t.max_qty}`
+                                : `${t.min_qty}+`;
+                              return (
+                                <p key={i} className="text-sm font-medium text-gray-800 whitespace-nowrap">
+                                  {range} @ ₱{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 0 })}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm font-medium text-gray-800">
+                            ₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-sm text-gray-600">{item.expiry_date || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-blue-50 border-t-2 border-blue-200">
-                  <tr>
-                    <td colSpan={2} className="px-3 py-2 text-right text-xs font-semibold text-gray-600">
-                      Total Amount
-                    </td>
-                    <td colSpan={2} className="px-3 py-2 text-right text-sm font-bold text-blue-700">
-                      ₱{Number(quotation.total_amount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           </div>
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex flex-wrap gap-3">
-          <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-            Close
-          </button>
-          {hasPermission("edit_quotations") && quotation.status === "draft" && (
-            <button onClick={onEdit} className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm">
-              <Pencil size={14} />
-              Edit
+        {showDeleteConfirm ? (
+          <div className="p-6 border-t border-gray-200">
+            <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <Trash2 size={20} className="text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">Delete this quotation?</p>
+                  <p className="text-xs text-red-500 mt-0.5">
+                    Quotation <span className="font-medium">{quotation.quotation_number}</span> will be permanently deleted. This cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+                >
+                  Keep Quotation
+                </button>
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); onDelete(); }}
+                  disabled={isDeleting}
+                  className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 border-t border-gray-200 flex flex-wrap gap-3">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              Close
             </button>
-          )}
-          {hasPermission("send_quotations") && (
-            <button onClick={onSendClick} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-              <Mail size={14} />
-              Send Email
-            </button>
-          )}
-          {hasPermission("delete_quotations") && quotation.status === "draft" && (
-            <button onClick={onDelete} disabled={isDeleting} className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm disabled:opacity-60">
-              <Trash2 size={14} />
-              Delete
-            </button>
-          )}
-        </div>
+            {hasPermission("edit_quotations") && quotation.status === "draft" && (
+              <button onClick={onEdit} className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm">
+                <Pencil size={14} />
+                Edit
+              </button>
+            )}
+            {hasPermission("send_quotations") && (
+              <button onClick={onSendClick} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                <Mail size={14} />
+                Send Email
+              </button>
+            )}
+            {hasPermission("delete_quotations") && quotation.status === "draft" && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -681,6 +1197,7 @@ export default function QuotationsPage() {
   const [editTarget, setEditTarget]           = useState(null);
   const [selectedQuotation, setSelectedQuotation] = useState(null);
   const [showSendModal, setShowSendModal]     = useState(false);
+  const [showTemplates, setShowTemplates]     = useState(false);
   const [search, setSearch]                   = useState("");
   const [statusFilter, setStatusFilter]       = useState("");
   const [page, setPage]                       = useState(1);
@@ -764,7 +1281,6 @@ export default function QuotationsPage() {
 
   const handleDelete = () => {
     if (!selectedQuotation) return;
-    if (!window.confirm(`Delete quotation ${selectedQuotation.quotation_number}? This cannot be undone.`)) return;
     deleteMutation.mutate(selectedQuotation.id);
   };
 
@@ -779,13 +1295,22 @@ export default function QuotationsPage() {
           <p className="text-sm text-gray-500 mt-1">Create and send price quotations to clients</p>
         </div>
         {hasPermission("create_quotations") && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            New Quotation
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <LayoutTemplate size={16} />
+              Templates
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={16} />
+              New Quotation
+            </button>
+          </div>
         )}
       </div>
 
@@ -855,7 +1380,12 @@ export default function QuotationsPage() {
                       {((pagination?.current_page - 1) * pagination?.per_page) + index + 1}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-blue-700">{q.quotation_number}</span>
+                      <button
+                        onClick={() => handleView(q)}
+                        className="text-sm font-semibold text-blue-700 hover:underline"
+                      >
+                        {q.quotation_number}
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{q.quotation_date}</td>
                     <td className="px-6 py-4">
@@ -922,6 +1452,10 @@ export default function QuotationsPage() {
           onSend={(template_id) => sendMutation.mutate({ id: selectedQuotation.id, template_id })}
           isSending={sendMutation.isPending}
         />
+      )}
+
+      {showTemplates && (
+        <TemplateManagerModal onClose={() => setShowTemplates(false)} />
       )}
     </div>
   );

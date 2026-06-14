@@ -211,7 +211,14 @@ export default function AreaCodesPage() {
                       {ac.code}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-800">{ac.name}</td>
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => { setSelected(ac); setShowModal(true); }}
+                      className="text-sm font-medium text-blue-600 hover:underline text-left"
+                    >
+                      {ac.name}
+                    </button>
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                     {ac.description || "-"}
                   </td>

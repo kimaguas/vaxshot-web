@@ -522,10 +522,15 @@ export default function InventoryPage() {
                       className={`hover:bg-gray-50 transition-colors ${exp ? "bg-red-50" : expSoon ? "bg-yellow-50" : ""}`}
                     >
                       <td className="px-5 py-4">
-                        <p className="font-medium text-gray-800">{product.brand_name}</p>
-                        {product.generic_name && (
-                          <p className="text-xs text-gray-400 mt-0.5">{product.generic_name}</p>
-                        )}
+                        <button
+                          onClick={() => hasPermission("adjust_inventory") && setAdjustFor(product)}
+                          className={`text-left ${hasPermission("adjust_inventory") ? "hover:text-blue-600 hover:underline cursor-pointer" : "cursor-default"}`}
+                        >
+                          <p className="font-medium text-blue-600">{product.brand_name}</p>
+                          {product.generic_name && (
+                            <p className="text-xs text-gray-400 mt-0.5">{product.generic_name}</p>
+                          )}
+                        </button>
                       </td>
                       <td className="px-5 py-4 font-mono text-gray-600 text-xs">{product.lot_no || "—"}</td>
                       <td className="px-5 py-4 text-right font-semibold text-gray-800">{stock.toLocaleString("en-PH")}</td>

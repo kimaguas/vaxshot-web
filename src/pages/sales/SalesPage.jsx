@@ -27,7 +27,7 @@ const StatusBadge = ({ status }) => {
   };
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] || colors.draft}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${colors[status] || colors.draft}`}
     >
       {status}
     </span>
@@ -42,7 +42,7 @@ const PaymentBadge = ({ status }) => {
   };
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] || colors.unpaid}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${colors[status] || colors.unpaid}`}
     >
       {status}
     </span>
@@ -348,13 +348,14 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [deliveryForm, setDeliveryForm] = useState({
     delivery_date: new Date().toISOString().split("T")[0],
     notes: "",
     items: [],
   });
 
-  const { data: deliveriesData, refetch: refetchDeliveries } = useQuery({
+  const { data: deliveriesData, isFetching: deliveriesFetching } = useQuery({
     queryKey: ["sale-deliveries", sale.id],
     queryFn: async () => {
       const res = await api.get(`/sales/${sale.id}/deliveries`);
@@ -410,6 +411,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
     or_number: "",
     reference_number: "",
     notes: "",
+    or_attachment: null,
   });
 
   const [editForm, setEditForm] = useState({
@@ -421,7 +423,20 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
 
   const handlePayment = (e) => {
     e.preventDefault();
-    onPayment(sale.id, paymentForm);
+    const rawAmount = String(paymentForm.amount).replace(/,/g, "");
+    if (paymentForm.or_attachment) {
+      const fd = new FormData();
+      fd.append("amount",           rawAmount);
+      fd.append("payment_method",   paymentForm.payment_method);
+      fd.append("payment_date",     paymentForm.payment_date);
+      fd.append("or_number",        paymentForm.or_number);
+      fd.append("reference_number", paymentForm.reference_number);
+      fd.append("notes",            paymentForm.notes);
+      fd.append("or_attachment",    paymentForm.or_attachment);
+      onPayment(sale.id, fd);
+    } else {
+      onPayment(sale.id, { ...paymentForm, amount: rawAmount });
+    }
   };
 
   const handleEdit = (e) => {
@@ -619,6 +634,18 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                       {payment.received_by && <span>By: {payment.received_by}</span>}
                       {payment.notes       && <span className="col-span-2">Notes: {payment.notes}</span>}
                     </div>
+                    {payment.or_attachment_url && (
+                      <div className="mt-2">
+                        <a
+                          href={payment.or_attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        >
+                          📎 View OR Attachment
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -629,7 +656,12 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
           {sale.status === "confirmed" && (
             <div>
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Delivery History</h4>
-              {deliveries.length === 0 ? (
+              {deliveriesFetching ? (
+                <div className="flex items-center gap-2 text-sm text-gray-400 py-1">
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  Updating...
+                </div>
+              ) : deliveries.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">No deliveries recorded yet.</p>
               ) : (
                 <div className="space-y-2">
@@ -777,10 +809,24 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Amount *</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={paymentForm.amount}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                    required min="0" step="0.01" max={sale.balance}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9.]/g, "");
+                      setPaymentForm({ ...paymentForm, amount: raw });
+                    }}
+                    onBlur={() => {
+                      const num = parseFloat(paymentForm.amount);
+                      if (!isNaN(num)) {
+                        setPaymentForm({ ...paymentForm, amount: num.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) });
+                      }
+                    }}
+                    onFocus={() => {
+                      const raw = String(paymentForm.amount).replace(/,/g, "");
+                      setPaymentForm({ ...paymentForm, amount: raw });
+                    }}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -833,6 +879,30 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    OR Attachment <span className="text-gray-400 font-normal">(optional — photo or PDF)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/jpg,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0] || null;
+                      if (file && file.size > 5 * 1024 * 1024) {
+                        toast.error("File must be 5MB or smaller.");
+                        e.target.value = "";
+                        return;
+                      }
+                      setPaymentForm({ ...paymentForm, or_attachment: file });
+                    }}
+                    className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none"
+                  />
+                  {paymentForm.or_attachment && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Selected: {paymentForm.or_attachment.name}
+                    </p>
+                  )}
+                </div>
               </div>
               <button
                 type="submit"
@@ -841,6 +911,36 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                 Record Payment
               </button>
             </form>
+          )}
+
+          {/* Cancel Confirmation */}
+          {showCancelConfirm && (
+            <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <XCircle size={20} className="text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">Cancel this sale?</p>
+                  <p className="text-xs text-red-500 mt-0.5">
+                    Sale <span className="font-medium">{sale.sale_number}</span> will be marked as cancelled. This cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white"
+                >
+                  Keep Sale
+                </button>
+                <button
+                  onClick={() => { setShowCancelConfirm(false); onCancel(sale.id); }}
+                  className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5"
+                >
+                  <XCircle size={14} />
+                  Yes, Cancel Sale
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Action Buttons */}
@@ -864,15 +964,11 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                 )}
                 {hasPermission("cancel_sales") && (
                   <button
-                    onClick={() => {
-                      if (window.confirm(`Cancel sale ${sale.sale_number}? This cannot be undone.`)) {
-                        onCancel(sale.id);
-                      }
-                    }}
+                    onClick={() => setShowCancelConfirm(true)}
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm flex items-center justify-center gap-2"
                   >
                     <XCircle size={16} />
-                    Cancel
+                    Cancel Sale
                   </button>
                 )}
               </>
@@ -1033,7 +1129,9 @@ export default function SalesPage() {
 
   const paymentMutation = useMutation({
     mutationFn: ({ saleId, data }) =>
-      api.post(`/sales/${saleId}/payments`, data),
+      api.post(`/sales/${saleId}/payments`, data, {
+        headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {},
+      }),
     onSuccess: (_, { saleId }) => {
       queryClient.invalidateQueries(["sales"]);
       toast.success("Payment recorded!");
@@ -1299,8 +1397,13 @@ export default function SalesPage() {
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {sale.sale_date}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {sale.invoice_number || "-"}
+                    <td className="px-4 py-3 text-sm">
+                      <button
+                        onClick={() => handleView(sale)}
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        {sale.invoice_number || sale.sale_number}
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-800">
                       {sale.customer}
