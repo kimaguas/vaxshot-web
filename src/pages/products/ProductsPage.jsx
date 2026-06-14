@@ -350,9 +350,11 @@ const ImportModal = ({ suppliers, onClose, onImport, importing }) => {
               required
               className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Required columns: brand_name, generic_name, tier_label, price. Optional: effective_date
-            </p>
+            <div className="mt-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-3 space-y-1">
+              <p><span className="font-medium text-gray-700">Required columns:</span> brand_name, min_qty, price</p>
+              <p><span className="font-medium text-gray-700">Optional columns:</span> max_qty, indication, lot_no, acquisition_cost, expiry_date, effective_date</p>
+              <p className="text-gray-400">One row per tier. Rows with the same brand_name are grouped into one product. Leave max_qty blank for the last (unlimited) tier.</p>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

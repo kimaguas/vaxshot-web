@@ -33,9 +33,8 @@ export default function LoginPage() {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">💉</div>
-          <h1 className="text-2xl font-bold text-gray-800">VaxshotApp</h1>
-          <p className="text-gray-500 text-sm mt-1">Pharma Inventory System</p>
+          <img src="/logo.png" alt="Vaxshot" className="h-20 w-auto mx-auto mb-2 object-contain" />
+          <p className="text-gray-500 text-sm mt-1">Vaxshot System</p>
         </div>
 
         {/* Form */}
@@ -111,7 +110,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-gray-400 mt-6">
-          VaxshotApp © 2026 · Pharma Inventory System
+          Vaxshot System © 2026
         </p>
       </div>
     </div>
