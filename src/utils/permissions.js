@@ -6,10 +6,8 @@ export const PERMISSION_MODULES = [
   {
     module: "Products",
     permissions: [
-      { name: "view_products",        label: "View Products" },
-      { name: "create_products",      label: "Add Product" },
-      { name: "edit_products",        label: "Edit Product" },
-      { name: "delete_products",      label: "Delete Product" },
+      { name: "view_products",         label: "View Products" },
+      { name: "manage_products",       label: "Manage Products" },
       { name: "view_acquisition_cost", label: "View Acquisition Cost" },
     ],
   },
@@ -41,6 +39,13 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    module: "Inventory",
+    permissions: [
+      { name: "view_inventory",   label: "View Inventory" },
+      { name: "adjust_inventory", label: "Adjust Inventory" },
+    ],
+  },
+  {
     module: "Sales",
     permissions: [
       { name: "view_sales",    label: "View Sales" },
@@ -48,6 +53,13 @@ export const PERMISSION_MODULES = [
       { name: "edit_sales",    label: "Edit Sale" },
       { name: "confirm_sales", label: "Confirm Sale" },
       { name: "cancel_sales",  label: "Cancel Sale" },
+    ],
+  },
+  {
+    module: "Deliveries",
+    permissions: [
+      { name: "view_deliveries",   label: "View Deliveries" },
+      { name: "manage_deliveries", label: "Manage Deliveries" },
     ],
   },
   {
@@ -100,11 +112,13 @@ export const PERMISSION_MODULES = [
 export const ROLE_PERMISSION_PRESETS = {
   admin: [
     "view_dashboard",
-    "view_products", "create_products", "edit_products", "delete_products", "view_acquisition_cost",
+    "view_products", "manage_products", "view_acquisition_cost",
     "view_suppliers", "create_suppliers", "edit_suppliers", "delete_suppliers",
     "view_customers", "create_customers", "edit_customers", "delete_customers",
     "view_purchase_orders", "create_purchase_orders", "receive_purchase_orders", "cancel_purchase_orders",
+    "view_inventory", "adjust_inventory",
     "view_sales", "create_sales", "edit_sales", "confirm_sales", "cancel_sales",
+    "view_deliveries", "manage_deliveries",
     "view_quotations", "create_quotations", "edit_quotations", "delete_quotations", "send_quotations",
     "view_email_templates", "create_email_templates", "edit_email_templates", "delete_email_templates",
     "view_reports",
@@ -114,11 +128,13 @@ export const ROLE_PERMISSION_PRESETS = {
   ],
   manager: [
     "view_dashboard",
-    "view_products", "create_products", "edit_products", "delete_products", "view_acquisition_cost",
+    "view_products", "manage_products", "view_acquisition_cost",
     "view_suppliers", "create_suppliers", "edit_suppliers", "delete_suppliers",
     "view_customers", "create_customers", "edit_customers", "delete_customers",
     "view_purchase_orders", "create_purchase_orders", "receive_purchase_orders", "cancel_purchase_orders",
+    "view_inventory", "adjust_inventory",
     "view_sales", "create_sales", "edit_sales", "confirm_sales", "cancel_sales",
+    "view_deliveries", "manage_deliveries",
     "view_quotations", "create_quotations", "edit_quotations", "delete_quotations", "send_quotations",
     "view_email_templates", "create_email_templates", "edit_email_templates", "delete_email_templates",
     "view_reports",
@@ -126,11 +142,13 @@ export const ROLE_PERMISSION_PRESETS = {
   ],
   staff: [
     "view_dashboard",
-    "view_products", "create_products", "edit_products",
+    "view_products",
     "view_suppliers", "create_suppliers", "edit_suppliers",
     "view_customers", "create_customers", "edit_customers",
     "view_purchase_orders", "create_purchase_orders", "receive_purchase_orders",
+    "view_inventory",
     "view_sales", "create_sales", "edit_sales", "confirm_sales",
+    "view_deliveries",
     "view_quotations", "create_quotations", "edit_quotations", "send_quotations",
     "view_email_templates", "create_email_templates", "edit_email_templates",
     "view_reports",

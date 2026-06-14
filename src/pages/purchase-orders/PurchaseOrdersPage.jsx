@@ -43,11 +43,18 @@ const CreatePOModal = ({ onClose, onSave }) => {
   });
 
   const { data: productsData } = useQuery({
-    queryKey: ["products-list"],
+    queryKey: ["products-by-supplier", form.supplier_id],
     queryFn: async () => {
-      const response = await api.get("/products");
+      const response = await api.get("/products", {
+        params: {
+          supplier_id: form.supplier_id || undefined,
+          status: "active",
+          per_page: 500,
+        },
+      });
       return response.data;
     },
+    enabled: !!form.supplier_id,
   });
 
   const addItem = () => {
@@ -73,13 +80,22 @@ const CreatePOModal = ({ onClose, onSave }) => {
     setForm({ ...form, items });
   };
 
+  const stripCommas = (v) => String(v).replace(/,/g, "");
+
   const totalAmount = form.items.reduce((sum, item) => {
-    return sum + (Number(item.quantity_ordered) * Number(item.unit_cost) || 0);
+    return sum + (Number(stripCommas(item.quantity_ordered)) * Number(stripCommas(item.unit_cost)) || 0);
   }, 0);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    onSave({
+      ...form,
+      items: form.items.map((item) => ({
+        ...item,
+        quantity_ordered: stripCommas(item.quantity_ordered),
+        unit_cost: stripCommas(item.unit_cost),
+      })),
+    });
   };
 
   return (
@@ -101,7 +117,11 @@ const CreatePOModal = ({ onClose, onSave }) => {
               <select
                 value={form.supplier_id}
                 onChange={(e) =>
-                  setForm({ ...form, supplier_id: e.target.value })
+                  setForm({
+                    ...form,
+                    supplier_id: e.target.value,
+                    items: [{ product_id: "", quantity_ordered: "", unit_cost: "" }],
+                  })
                 }
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -172,7 +192,9 @@ const CreatePOModal = ({ onClose, onSave }) => {
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
-                      <option value="">Select Product</option>
+                      <option value="">
+                        {form.supplier_id ? "Select Product" : "Select a supplier first"}
+                      </option>
                       {productsData?.products?.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.brand_name}
@@ -182,28 +204,47 @@ const CreatePOModal = ({ onClose, onSave }) => {
                   </div>
                   <div className="col-span-5 sm:col-span-3">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="Qty"
                       value={item.quantity_ordered}
-                      onChange={(e) =>
-                        updateItem(index, "quantity_ordered", e.target.value)
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        updateItem(index, "quantity_ordered", raw);
+                      }}
+                      onBlur={() => {
+                        const num = parseInt(stripCommas(item.quantity_ordered), 10);
+                        if (!isNaN(num) && num > 0)
+                          updateItem(index, "quantity_ordered", num.toLocaleString("en-PH"));
+                      }}
+                      onFocus={() =>
+                        updateItem(index, "quantity_ordered", stripCommas(item.quantity_ordered))
                       }
                       required
-                      min="1"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
                   <div className="col-span-5 sm:col-span-3">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Unit Cost"
                       value={item.unit_cost}
-                      onChange={(e) =>
-                        updateItem(index, "unit_cost", e.target.value)
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9.]/g, "");
+                        updateItem(index, "unit_cost", raw);
+                      }}
+                      onBlur={() => {
+                        const num = parseFloat(stripCommas(item.unit_cost));
+                        if (!isNaN(num) && num >= 0)
+                          updateItem(index, "unit_cost",
+                            num.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          );
+                      }}
+                      onFocus={() =>
+                        updateItem(index, "unit_cost", stripCommas(item.unit_cost))
                       }
                       required
-                      min="0"
-                      step="0.01"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
@@ -341,12 +382,12 @@ const ViewPOModal = ({ po, onClose, onConfirm, onReceive }) => {
                 {po.items?.map((item, index) => (
                   <tr key={index}>
                     <td className="px-3 py-2">{item.brand_name}</td>
-                    <td className="px-3 py-2">{item.quantity_ordered}</td>
+                    <td className="px-3 py-2">{Number(item.quantity_ordered).toLocaleString("en-PH")}</td>
                     <td className="px-3 py-2 text-green-600">
-                      {item.quantity_received}
+                      {Number(item.quantity_received).toLocaleString("en-PH")}
                     </td>
                     <td className="px-3 py-2 text-orange-600">
-                      {item.remaining_quantity}
+                      {Number(item.remaining_quantity).toLocaleString("en-PH")}
                     </td>
                     {hasPermission("view_acquisition_cost") && (
                       <td className="px-3 py-2">

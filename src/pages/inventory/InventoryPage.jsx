@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
-import { Search, Package, Eye, SlidersHorizontal, X } from "lucide-react";
+import { Search, Package, Eye, SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
 
@@ -24,6 +24,134 @@ function StockBadge({ stock, maintainingStock }) {
   if (maintainingStock > 0 && stock <= maintainingStock)
     return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">Low Stock</span>;
   return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">OK</span>;
+}
+
+function ProductCombobox({ value, onChange, supplierFilter }) {
+  const [inputText, setInputText] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Reset input text when value is cleared externally (e.g. supplier change)
+  useEffect(() => {
+    if (!value) setInputText("");
+  }, [value]);
+
+  const { data: comboData } = useQuery({
+    queryKey: ["inventory-combo", supplierFilter],
+    queryFn: async () => {
+      const res = await api.get("/products", {
+        params: { supplier_id: supplierFilter || undefined, status: "active", per_page: 500 },
+      });
+      return res.data;
+    },
+  });
+
+  const allProducts = comboData?.products || [];
+  const filtered = inputText
+    ? allProducts.filter(
+        (p) =>
+          p.brand_name.toLowerCase().includes(inputText.toLowerCase()) ||
+          (p.generic_name && p.generic_name.toLowerCase().includes(inputText.toLowerCase()))
+      )
+    : allProducts;
+
+  const handleSelect = (product) => {
+    onChange(product);
+    setInputText("");
+    setOpen(false);
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    onChange(null);
+    setInputText("");
+    setOpen(false);
+  };
+
+  const handleFocus = () => {
+    setInputText("");
+    setOpen(true);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 border rounded-lg bg-white transition-all ${
+          open ? "border-blue-500 ring-2 ring-blue-500" : "border-gray-300"
+        }`}
+        onClick={() => { if (!open) { setOpen(true); } }}
+      >
+        <Search size={15} className="text-gray-400 shrink-0" />
+        <input
+          type="text"
+          className="flex-1 text-sm outline-none bg-transparent min-w-0"
+          placeholder={value ? value.brand_name : "All Products"}
+          value={open ? inputText : (value ? value.brand_name : "")}
+          onChange={(e) => setInputText(e.target.value)}
+          onFocus={handleFocus}
+        />
+        <div className="flex items-center gap-1 shrink-0">
+          {value && (
+            <button
+              onClick={handleClear}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+          <ChevronDown
+            size={14}
+            className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+          {/* All Products option */}
+          <button
+            className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+              !value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-500 hover:bg-gray-50"
+            }`}
+            onClick={() => handleSelect(null)}
+          >
+            All Products
+          </button>
+          <div className="border-t border-gray-100" />
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-gray-400">No products found</div>
+          ) : (
+            filtered.map((p) => (
+              <button
+                key={p.id}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                  value?.id === p.id
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+                onClick={() => handleSelect(p)}
+              >
+                <div className="font-medium">{p.brand_name}</div>
+                {p.generic_name && (
+                  <div className="text-xs text-gray-400 mt-0.5">{p.generic_name}</div>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const BatchModal = ({ product, onClose }) => {
@@ -62,6 +190,7 @@ const BatchModal = ({ product, onClose }) => {
               <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                 <tr>
                   <th className="text-left px-5 py-3 font-semibold text-gray-600">Lot No</th>
+                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Receipt Date</th>
                   <th className="text-left px-5 py-3 font-semibold text-gray-600">Expiry Date</th>
                   <th className="text-right px-5 py-3 font-semibold text-gray-600">Received</th>
                   <th className="text-right px-5 py-3 font-semibold text-gray-600">Remaining</th>
@@ -81,9 +210,10 @@ const BatchModal = ({ product, onClose }) => {
                     }
                   >
                     <td className="px-5 py-3 font-mono text-gray-800">{batch.lot_number}</td>
+                    <td className="px-5 py-3 text-gray-600">{batch.received_date || "—"}</td>
                     <td className="px-5 py-3 text-gray-600">{batch.expiry_date || "—"}</td>
                     <td className="px-5 py-3 text-right text-gray-600">{batch.quantity}</td>
-                    <td className="px-5 py-3 text-right font-semibold text-gray-800">{batch.remaining_quantity}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-gray-800">{Number(batch.remaining_quantity).toLocaleString("en-PH")}</td>
                     <td className="px-5 py-3">
                       {batch.is_expired ? (
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">Expired</span>
@@ -241,7 +371,7 @@ const AdjustModal = ({ product, onClose, onSave, isSaving }) => {
 export default function InventoryPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
-  const [search, setSearch] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [supplierFilter, setSupplierFilter] = useState("");
   const [page, setPage] = useState(1);
   const [viewBatchesFor, setViewBatchesFor] = useState(null);
@@ -257,11 +387,11 @@ export default function InventoryPage() {
   const suppliers = suppliersData?.suppliers || [];
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inventory", search, supplierFilter, page],
+    queryKey: ["inventory", selectedProduct?.id, supplierFilter, page],
     queryFn: async () => {
       const res = await api.get("/products", {
         params: {
-          search,
+          product_id: selectedProduct?.id || undefined,
           supplier_id: supplierFilter || undefined,
           page,
           per_page: 15,
@@ -289,12 +419,19 @@ export default function InventoryPage() {
       queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-batches-active"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-combo"] });
       toast.success("Stock adjustment saved!");
       setAdjustFor(null);
     },
     onError: (err) =>
       toast.error(err.response?.data?.message || "Failed to save adjustment"),
   });
+
+  const handleSupplierChange = (e) => {
+    setSupplierFilter(e.target.value);
+    setSelectedProduct(null);
+    setPage(1);
+  };
 
   const products = data?.products || [];
   const pagination = data?.pagination || null;
@@ -310,7 +447,7 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={supplierFilter}
-            onChange={(e) => { setSupplierFilter(e.target.value); setPage(1); }}
+            onChange={handleSupplierChange}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">All Suppliers</option>
@@ -318,14 +455,11 @@ export default function InventoryPage() {
               <option key={s.id} value={s.id}>{s.company}</option>
             ))}
           </select>
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+          <div className="w-64">
+            <ProductCombobox
+              value={selectedProduct}
+              onChange={(p) => { setSelectedProduct(p); setPage(1); }}
+              supplierFilter={supplierFilter}
             />
           </div>
         </div>
@@ -394,7 +528,7 @@ export default function InventoryPage() {
                         )}
                       </td>
                       <td className="px-5 py-4 font-mono text-gray-600 text-xs">{product.lot_no || "—"}</td>
-                      <td className="px-5 py-4 text-right font-semibold text-gray-800">{stock}</td>
+                      <td className="px-5 py-4 text-right font-semibold text-gray-800">{stock.toLocaleString("en-PH")}</td>
                       <td className="px-5 py-4 text-right text-gray-500">{minStock || "—"}</td>
                       <td className="px-5 py-4">
                         <StockBadge stock={stock} maintainingStock={minStock} />

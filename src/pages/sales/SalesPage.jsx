@@ -12,6 +12,7 @@ import {
   CreditCard,
   Pencil,
   X,
+  Truck,
 } from "lucide-react";
 
 import Pagination from "../../components/ui/Pagination";
@@ -44,6 +45,20 @@ const PaymentBadge = ({ status }) => {
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] || colors.unpaid}`}
     >
       {status}
+    </span>
+  );
+};
+
+const DeliveryBadge = ({ status }) => {
+  const map = {
+    pending:   "bg-gray-100 text-gray-500",
+    partial:   "bg-blue-100 text-blue-600",
+    delivered: "bg-green-100 text-green-600",
+  };
+  const labels = { pending: "Pending", partial: "Partial", delivered: "Delivered" };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${map[status] || map.pending}`}>
+      {labels[status] || "Pending"}
     </span>
   );
 };
@@ -328,10 +343,65 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
 };
 
 // View Sale Modal
-const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate }) => {
+const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onDelivery, isDeliverying }) => {
   const { hasPermission } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  const [deliveryForm, setDeliveryForm] = useState({
+    delivery_date: new Date().toISOString().split("T")[0],
+    notes: "",
+    items: [],
+  });
+
+  const { data: deliveriesData, refetch: refetchDeliveries } = useQuery({
+    queryKey: ["sale-deliveries", sale.id],
+    queryFn: async () => {
+      const res = await api.get(`/sales/${sale.id}/deliveries`);
+      return res.data;
+    },
+    enabled: hasPermission("view_deliveries"),
+  });
+  const deliveries = deliveriesData?.deliveries || [];
+
+  const getAlreadyDelivered = (saleItemId) =>
+    deliveries.reduce((sum, d) => {
+      const found = d.items.find((i) => i.sale_item_id === saleItemId);
+      return sum + (found?.quantity_delivered || 0);
+    }, 0);
+
+  const openDeliveryForm = () => {
+    const items = (sale.items || [])
+      .map((item) => {
+        const alreadyDelivered = getAlreadyDelivered(item.id);
+        const remaining = item.quantity - alreadyDelivered;
+        return {
+          sale_item_id:        item.id,
+          product_name:        item.brand_name,
+          lot_number:          item.lot_number,
+          ordered:             item.quantity,
+          already_delivered:   alreadyDelivered,
+          remaining,
+          quantity_delivered:  remaining,
+        };
+      })
+      .filter((i) => i.remaining > 0);
+    setDeliveryForm({ delivery_date: new Date().toISOString().split("T")[0], notes: "", items });
+    setShowDeliveryForm(true);
+  };
+
+  const handleDelivery = (e) => {
+    e.preventDefault();
+    const payload = {
+      delivery_date: deliveryForm.delivery_date,
+      notes: deliveryForm.notes || undefined,
+      items: deliveryForm.items
+        .filter((i) => parseInt(i.quantity_delivered) > 0)
+        .map((i) => ({ sale_item_id: i.sale_item_id, quantity_delivered: parseInt(i.quantity_delivered) })),
+    };
+    if (!payload.items.length) { toast.error("Enter at least one item quantity"); return; }
+    onDelivery(sale.id, payload, () => setShowDeliveryForm(false));
+  };
 
   const [paymentForm, setPaymentForm] = useState({
     amount: sale.balance || "",
@@ -372,6 +442,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
           <div className="flex items-center gap-2">
             <StatusBadge status={sale.status} />
             <PaymentBadge status={sale.payment_status} />
+            <DeliveryBadge status={sale.delivery_status} />
             {hasPermission("edit_sales") && (
               <button
                 onClick={() => setShowEditForm(!showEditForm)}
@@ -554,6 +625,147 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
             </div>
           )}
 
+          {/* Delivery History */}
+          {sale.status === "confirmed" && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Delivery History</h4>
+              {deliveries.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">No deliveries recorded yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {deliveries.map((d) => (
+                    <div key={d.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50 text-sm">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-semibold text-gray-700">{d.delivery_number}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">{d.delivery_date}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            d.status === "complete" ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
+                          }`}>
+                            {d.status === "complete" ? "Complete" : "Partial"}
+                          </span>
+                        </div>
+                      </div>
+                      {d.delivered_by && (
+                        <p className="text-xs text-gray-500 mb-1">By: {d.delivered_by}</p>
+                      )}
+                      <table className="w-full text-xs mt-1">
+                        <thead>
+                          <tr className="text-gray-500">
+                            <th className="text-left py-0.5">Product</th>
+                            <th className="text-left py-0.5">Lot</th>
+                            <th className="text-right py-0.5">Qty Delivered</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {d.items.map((di) => (
+                            <tr key={di.id} className="text-gray-700">
+                              <td className="py-0.5">{di.product_name}</td>
+                              <td className="py-0.5 text-gray-500">{di.lot_number || "—"}</td>
+                              <td className="py-0.5 text-right font-medium">{di.quantity_delivered}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {d.notes && <p className="text-xs text-gray-400 mt-1">Notes: {d.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Record Delivery Form */}
+          {showDeliveryForm && (
+            <form
+              onSubmit={handleDelivery}
+              className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-3"
+            >
+              <h4 className="text-sm font-semibold text-blue-700">Record Delivery</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Delivery Date *</label>
+                  <input
+                    type="date"
+                    value={deliveryForm.delivery_date}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, delivery_date: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                  <input
+                    type="text"
+                    value={deliveryForm.notes}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, notes: e.target.value })}
+                    placeholder="Optional remarks..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Items to Deliver</label>
+                <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-xs text-gray-500">
+                      <tr>
+                        <th className="text-left px-3 py-2">Product</th>
+                        <th className="text-right px-3 py-2">Ordered</th>
+                        <th className="text-right px-3 py-2">Delivered</th>
+                        <th className="text-right px-3 py-2">Remaining</th>
+                        <th className="text-right px-3 py-2 w-28">Qty to Deliver</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {deliveryForm.items.map((item, idx) => (
+                        <tr key={item.sale_item_id}>
+                          <td className="px-3 py-2">
+                            <div className="font-medium">{item.product_name}</div>
+                            {item.lot_number && <div className="text-xs text-gray-400">{item.lot_number}</div>}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-500">{item.ordered}</td>
+                          <td className="px-3 py-2 text-right text-gray-500">{item.already_delivered}</td>
+                          <td className="px-3 py-2 text-right text-blue-600 font-medium">{item.remaining}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              max={item.remaining}
+                              value={item.quantity_delivered}
+                              onChange={(e) => {
+                                const items = [...deliveryForm.items];
+                                items[idx] = { ...items[idx], quantity_delivered: e.target.value };
+                                setDeliveryForm({ ...deliveryForm, items });
+                              }}
+                              className="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeliveryForm(false)}
+                  className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDeliverying}
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isDeliverying ? "Saving..." : "Save Delivery"}
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Record Payment Form */}
           {showPaymentForm && sale.status === "confirmed" && sale.payment_status !== "paid" && (
             <form
@@ -672,6 +884,15 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               >
                 <CreditCard size={16} />
                 {showPaymentForm ? "Hide Payment" : "Record Payment"}
+              </button>
+            )}
+            {sale.status === "confirmed" && sale.delivery_status !== "delivered" && (
+              <button
+                onClick={() => { setShowPaymentForm(false); showDeliveryForm ? setShowDeliveryForm(false) : openDeliveryForm(); }}
+                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm flex items-center justify-center gap-2"
+              >
+                <Truck size={16} />
+                {showDeliveryForm ? "Hide Delivery" : "Record Delivery"}
               </button>
             )}
           </div>
@@ -831,6 +1052,20 @@ export default function SalesPage() {
     },
     onError: (err) =>
       toast.error(err.response?.data?.message || "Failed to update sale"),
+  });
+
+  const deliveryMutation = useMutation({
+    mutationFn: ({ saleId, data }) => api.post(`/sales/${saleId}/deliveries`, data),
+    onSuccess: (res, { saleId }) => {
+      queryClient.invalidateQueries(["sales"]);
+      queryClient.invalidateQueries(["sale-deliveries", saleId]);
+      queryClient.invalidateQueries(["inventory"]);
+      queryClient.invalidateQueries(["inventory-stats"]);
+      toast.success(`Delivery ${res.data.delivery_number} recorded!`);
+      refreshSale(saleId);
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to record delivery"),
   });
 
   // Fetch full sale details when viewing
@@ -1027,6 +1262,7 @@ export default function SalesPage() {
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Balance</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Status</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Payment</th>
+              <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Delivery</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
@@ -1091,6 +1327,9 @@ export default function SalesPage() {
                       <PaymentBadge status={sale.payment_status} />
                     </td>
                     <td className="px-4 py-3">
+                      <DeliveryBadge status={sale.delivery_status} />
+                    </td>
+                    <td className="px-4 py-3">
                       <button
                         onClick={() => handleView(sale)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1125,6 +1364,8 @@ export default function SalesPage() {
           onCancel={(id) => cancelMutation.mutate(id)}
           onPayment={(saleId, data) => paymentMutation.mutate({ saleId, data })}
           onUpdate={(id, data) => updateMutation.mutate({ id, data })}
+          onDelivery={(saleId, data, cb) => deliveryMutation.mutate({ saleId, data }, { onSuccess: cb })}
+          isDeliverying={deliveryMutation.isPending}
         />
       )}
     </div>
