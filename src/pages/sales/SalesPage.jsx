@@ -297,9 +297,16 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
                       </div>
                     </div>
 
-                    {selectedCatalog?.tiers?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 px-1">
-                        {selectedCatalog.tiers.map((t, ti) => (
+                    {selectedCatalog && (
+                      <div className="flex flex-wrap items-center gap-1.5 px-1">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                          (selectedCatalog.stock ?? 0) === 0
+                            ? "bg-red-50 text-red-600 border-red-200"
+                            : "bg-green-50 text-green-700 border-green-200"
+                        }`}>
+                          Stock: {(selectedCatalog.stock ?? 0).toLocaleString()} available
+                        </span>
+                        {selectedCatalog.tiers?.map((t, ti) => (
                           <span
                             key={ti}
                             className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full"
@@ -343,12 +350,52 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
 };
 
 // View Sale Modal
-const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onDelivery, isDeliverying }) => {
+const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onUpdateItems, onDelivery, isDeliverying, products }) => {
   const { hasPermission } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showItemsEdit, setShowItemsEdit] = useState(false);
+  const [itemsForm, setItemsForm] = useState(
+    () => (sale.items || []).map((i) => ({
+      product_id: i.product_id ?? "",
+      quantity:   String(i.quantity),
+      unit_price: String(i.unit_price),
+    }))
+  );
+
+  const getTierPrice = (tiers, qty) => {
+    if (!tiers?.length) return "";
+    const n = parseInt(qty) || 1;
+    const tier = tiers.find((t) => n >= (t.min_qty ?? 1) && (t.max_qty == null || n <= t.max_qty));
+    return tier?.price ?? tiers[tiers.length - 1]?.price ?? "";
+  };
+
+  const addItemRow = () =>
+    setItemsForm([...itemsForm, { product_id: "", quantity: "", unit_price: "" }]);
+
+  const removeItemRow = (index) =>
+    setItemsForm(itemsForm.filter((_, i) => i !== index));
+
+  const updateItemRow = (index, field, value) => {
+    const rows = [...itemsForm];
+    rows[index][field] = value;
+    if (field === "product_id") {
+      const p = products?.find((c) => c.id === parseInt(value));
+      if (p) rows[index].unit_price = getTierPrice(p.tiers, rows[index].quantity || 1);
+    }
+    if (field === "quantity") {
+      const p = products?.find((c) => c.id === parseInt(rows[index].product_id));
+      if (p?.tiers?.length) rows[index].unit_price = getTierPrice(p.tiers, value);
+    }
+    setItemsForm(rows);
+  };
+
+  const handleItemsSave = (e) => {
+    e.preventDefault();
+    onUpdateItems(sale.id, itemsForm, () => setShowItemsEdit(false));
+  };
   const [deliveryForm, setDeliveryForm] = useState({
     delivery_date: new Date().toISOString().split("T")[0],
     notes: "",
@@ -584,31 +631,149 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
 
           {/* Items */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Items</h4>
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-3 py-2">Product</th>
-                  <th className="text-left px-3 py-2">Lot No</th>
-                  <th className="text-left px-3 py-2">Expiry</th>
-                  <th className="text-left px-3 py-2">Qty</th>
-                  <th className="text-left px-3 py-2">Price</th>
-                  <th className="text-left px-3 py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {sale.items?.map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-3 py-2">{item.brand_name}</td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{item.lot_number}</td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{item.expiry_date}</td>
-                    <td className="px-3 py-2">{item.quantity}</td>
-                    <td className="px-3 py-2">₱{Number(item.unit_price).toLocaleString()}</td>
-                    <td className="px-3 py-2 font-medium">₱{Number(item.total_price).toLocaleString()}</td>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold text-gray-700">Items</h4>
+              {hasPermission("edit_sales") && sale.status === "draft" && (
+                <button
+                  type="button"
+                  onClick={() => setShowItemsEdit(!showItemsEdit)}
+                  className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                    showItemsEdit
+                      ? "bg-orange-100 text-orange-700 border-orange-300"
+                      : "text-gray-500 border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <Pencil size={12} />
+                  {showItemsEdit ? "Cancel Edit" : "Edit Items"}
+                </button>
+              )}
+            </div>
+
+            {showItemsEdit ? (
+              <form onSubmit={handleItemsSave} className="space-y-3">
+                <div className="space-y-2">
+                  {itemsForm.map((row, index) => {
+                    const selectedProduct = products?.find((c) => c.id === parseInt(row.product_id));
+                    return (
+                      <div key={index} className="space-y-1">
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-5">
+                            <ProductSelect
+                              products={products?.slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name)) ?? []}
+                              value={row.product_id}
+                              onChange={(id) => updateItemRow(index, "product_id", id)}
+                              required
+                            />
+                          </div>
+                          <div className="col-span-3">
+                            <input
+                              type="number"
+                              placeholder="Qty"
+                              value={row.quantity}
+                              onChange={(e) => updateItemRow(index, "quantity", e.target.value)}
+                              required
+                              min="1"
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div className="col-span-3">
+                            <input
+                              type="number"
+                              placeholder="Unit Price"
+                              value={row.unit_price}
+                              onChange={(e) => updateItemRow(index, "unit_price", e.target.value)}
+                              required
+                              min="0"
+                              step="0.01"
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            {itemsForm.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeItemRow(index)}
+                                className="text-red-500 hover:text-red-700 text-lg font-bold"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {selectedProduct && (
+                          <div className="flex flex-wrap items-center gap-1.5 px-1">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                              (selectedProduct.stock ?? 0) === 0
+                                ? "bg-red-50 text-red-600 border-red-200"
+                                : "bg-green-50 text-green-700 border-green-200"
+                            }`}>
+                              Stock: {(selectedProduct.stock ?? 0).toLocaleString()} available
+                            </span>
+                            {selectedProduct.tiers?.map((t, ti) => (
+                              <span key={ti} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                                {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={addItemRow}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    + Add Item
+                  </button>
+                  <span className="text-sm font-semibold text-gray-700">
+                    Total: ₱{itemsForm.reduce((s, r) => s + (Number(r.quantity) * Number(r.unit_price) || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowItemsEdit(false)}
+                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    Save Items
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2">Product</th>
+                    <th className="text-left px-3 py-2">Lot No</th>
+                    <th className="text-left px-3 py-2">Expiry</th>
+                    <th className="text-left px-3 py-2">Qty</th>
+                    <th className="text-left px-3 py-2">Price</th>
+                    <th className="text-left px-3 py-2">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {sale.items?.map((item, index) => (
+                    <tr key={index}>
+                      <td className="px-3 py-2">{item.brand_name}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500">{item.lot_number}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500">{item.expiry_date}</td>
+                      <td className="px-3 py-2">{item.quantity}</td>
+                      <td className="px-3 py-2">₱{Number(item.unit_price).toLocaleString()}</td>
+                      <td className="px-3 py-2 font-medium">₱{Number(item.total_price).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Payment History */}
@@ -1034,6 +1199,16 @@ export default function SalesPage() {
     },
   });
 
+  const { data: productsData } = useQuery({
+    queryKey: ["products-for-sale"],
+    queryFn: async () => {
+      const res = await api.get("/products", { params: { status: "active", per_page: 500 } });
+      return res.data;
+    },
+    enabled: !!selectedSale && selectedSale.status === "draft",
+  });
+  const productsForSale = productsData?.products ?? [];
+
   const buildParams = () => {
     const p = { search, page, sort_by: sortBy, sort_order: sortOrder };
     if (paymentStatus) p.payment_status = paymentStatus;
@@ -1150,6 +1325,17 @@ export default function SalesPage() {
     },
     onError: (err) =>
       toast.error(err.response?.data?.message || "Failed to update sale"),
+  });
+
+  const updateItemsMutation = useMutation({
+    mutationFn: ({ id, items }) => api.put(`/sales/${id}/items`, { items }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(["sales"]);
+      toast.success("Items updated!");
+      setSelectedSale(res.data.sale);
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to update items"),
   });
 
   const deliveryMutation = useMutation({
@@ -1467,8 +1653,10 @@ export default function SalesPage() {
           onCancel={(id) => cancelMutation.mutate(id)}
           onPayment={(saleId, data) => paymentMutation.mutate({ saleId, data })}
           onUpdate={(id, data) => updateMutation.mutate({ id, data })}
+          onUpdateItems={(id, items, cb) => updateItemsMutation.mutate({ id, items }, { onSuccess: cb })}
           onDelivery={(saleId, data, cb) => deliveryMutation.mutate({ saleId, data }, { onSuccess: cb })}
           isDeliverying={deliveryMutation.isPending}
+          products={productsForSale}
         />
       )}
     </div>

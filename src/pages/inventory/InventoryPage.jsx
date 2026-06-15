@@ -439,7 +439,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="space-y-3">
         <div>
           <h1 className="text-xl font-bold text-gray-800">Inventory</h1>
           <p className="text-sm text-gray-500 mt-0.5">Monitor stock levels, batches, and expiry</p>

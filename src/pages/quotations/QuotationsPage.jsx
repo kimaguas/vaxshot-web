@@ -39,11 +39,12 @@ const TemplateFormModal = ({ initial, onClose, onSave, isPending, products }) =>
     description: initial?.description ?? "",
     items: initial?.items?.length
       ? initial.items.map((i) => ({
-          product_id:  String(i.product_id),
-          quantity:    String(i.quantity),
-          unit_price:  String(i.unit_price),
+          product_id:    String(i.product_id),
+          quantity:      String(i.quantity),
+          unit_price:    String(i.unit_price),
+          use_flat_price: false,
         }))
-      : [{ product_id: "", quantity: "", unit_price: "" }],
+      : [{ product_id: "", quantity: "", unit_price: "", use_flat_price: false }],
   });
 
   const getTierPrice = (tiers, qty) => {
@@ -54,7 +55,7 @@ const TemplateFormModal = ({ initial, onClose, onSave, isPending, products }) =>
   };
 
   const addItem = () =>
-    setForm({ ...form, items: [...form.items, { product_id: "", quantity: "", unit_price: "" }] });
+    setForm({ ...form, items: [...form.items, { product_id: "", quantity: "", unit_price: "", use_flat_price: false }] });
 
   const removeItem = (idx) => {
     if (form.items.length === 1) return;
@@ -66,7 +67,7 @@ const TemplateFormModal = ({ initial, onClose, onSave, isPending, products }) =>
     items[idx][field] = value;
     if (field === "product_id") {
       const catalog = products.find((p) => p.id === parseInt(value));
-      if (catalog?.tiers?.length) {
+      if (!items[idx].use_flat_price && catalog?.tiers?.length) {
         items[idx].quantity   = String(catalog.tiers[0].min_qty ?? 1);
         items[idx].unit_price = String(catalog.tiers[0].price);
       } else {
@@ -74,7 +75,7 @@ const TemplateFormModal = ({ initial, onClose, onSave, isPending, products }) =>
         items[idx].unit_price = "";
       }
     }
-    if (field === "quantity") {
+    if (field === "quantity" && !items[idx].use_flat_price) {
       const catalog = products.find((p) => p.id === parseInt(items[idx].product_id));
       if (catalog?.tiers?.length) {
         items[idx].unit_price = getTierPrice(catalog.tiers, value);
@@ -160,8 +161,22 @@ const TemplateFormModal = ({ initial, onClose, onSave, isPending, products }) =>
                       </button>
                     </div>
 
+                    {/* Single price toggle */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`flat-tpl-${idx}`}
+                        checked={item.use_flat_price}
+                        onChange={(e) => updateItem(idx, "use_flat_price", e.target.checked)}
+                        className="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
+                      />
+                      <label htmlFor={`flat-tpl-${idx}`} className="text-xs text-gray-500 cursor-pointer select-none">
+                        Single price only
+                      </label>
+                    </div>
+
                     {/* Tier pills */}
-                    {tiers.length > 0 && (
+                    {!item.use_flat_price && tiers.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {tiers.map((t, ti) => {
                           const isActive = ti === activeTierIdx;
@@ -592,17 +607,19 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
     address:        initial?.address        ?? "",
     emails:         parseEmails(initial?.emails ?? initial?.email),
     cc_emails:      Array.isArray(initial?.cc_emails) && initial.cc_emails.length ? initial.cc_emails : [],
-    quotation_date: initial?.quotation_date ?? new Date().toISOString().split("T")[0],
-    notes:          initial?.notes          ?? "",
+    quotation_date:  initial?.quotation_date  ?? new Date().toISOString().split("T")[0],
+    quotation_type:  initial?.quotation_type  ?? "pricing",
+    notes:           initial?.notes           ?? "",
     items: initial?.items?.length
       ? initial.items.map((i) => ({
-          product_id:   String(i.product_id),
-          quantity:     String(i.quantity),
-          unit_price:   String(i.unit_price),
-          description:  i.description  ?? "",
-          expiry_date:  i.expiry_date  ?? "",
+          product_id:     String(i.product_id),
+          quantity:       String(i.quantity),
+          unit_price:     String(i.unit_price),
+          description:    i.description   ?? "",
+          expiry_date:    i.expiry_date   ?? "",
+          use_flat_price: !!i.use_flat_price,
         }))
-      : [{ product_id: "", quantity: "", unit_price: "", description: "", expiry_date: "" }],
+      : [{ product_id: "", quantity: "", unit_price: "", description: "", expiry_date: "", use_flat_price: false }],
   });
 
   const { data: catalogsData } = useQuery({
@@ -616,7 +633,7 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
   });
 
   const addItem = () => {
-    setForm({ ...form, items: [...form.items, { product_id: "", quantity: "", unit_price: "", description: "", expiry_date: "" }] });
+    setForm({ ...form, items: [...form.items, { product_id: "", quantity: "", unit_price: "", description: "", expiry_date: "", use_flat_price: false }] });
   };
 
   const removeItem = (index) => {
@@ -641,7 +658,7 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
       if (catalog) {
         items[index].description = catalog.indication  ?? "";
         items[index].expiry_date = catalog.expiry_date ?? "";
-        if (catalog.tiers?.length) {
+        if (!items[index].use_flat_price && catalog.tiers?.length) {
           items[index].quantity   = String(catalog.tiers[0].min_qty ?? 1);
           items[index].unit_price = String(catalog.tiers[0].price);
         } else {
@@ -650,7 +667,7 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
         }
       }
     }
-    if (field === "quantity") {
+    if (field === "quantity" && !items[index].use_flat_price) {
       const catalog = catalogsData?.products?.find((c) => c.id === parseInt(items[index].product_id));
       if (catalog?.tiers?.length) {
         items[index].unit_price = getTierPrice(catalog.tiers, value);
@@ -841,6 +858,37 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
             </div>
           </div>
 
+          {/* Quotation Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Quotation Type</label>
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="quotation_type"
+                  value="pricing"
+                  checked={form.quotation_type === "pricing"}
+                  onChange={() => setForm({ ...form, quotation_type: "pricing" })}
+                  className="accent-blue-600"
+                />
+                <span className="text-sm text-gray-700">Pricing Only</span>
+                <span className="text-xs text-gray-400">(price tiers per product)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="quotation_type"
+                  value="with_total"
+                  checked={form.quotation_type === "with_total"}
+                  onChange={() => setForm({ ...form, quotation_type: "with_total" })}
+                  className="accent-blue-600"
+                />
+                <span className="text-sm text-gray-700">Pricing with Total</span>
+                <span className="text-xs text-gray-400">(price × qty = total)</span>
+              </label>
+            </div>
+          </div>
+
           {/* Load Template (create mode only) */}
           {!isEdit && availableTemplates.length > 0 && (
             <div>
@@ -918,8 +966,22 @@ const QuotationFormModal = ({ onClose, onSave, isPending, initial }) => {
                       </button>
                     </div>
 
+                    {/* Single price toggle */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`flat-qt-${index}`}
+                        checked={item.use_flat_price}
+                        onChange={(e) => updateItem(index, "use_flat_price", e.target.checked)}
+                        className="w-3.5 h-3.5 accent-blue-600 cursor-pointer"
+                      />
+                      <label htmlFor={`flat-qt-${index}`} className="text-xs text-gray-500 cursor-pointer select-none">
+                        Single price only
+                      </label>
+                    </div>
+
                     {/* Tier pills — click to apply */}
-                    {tiers.length > 0 && (
+                    {!item.use_flat_price && tiers.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {tiers.map((t, ti) => {
                           const isActive = ti === activeTierIdx;
@@ -1077,50 +1139,95 @@ const ViewQuotationModal = ({ quotation, onClose, onEdit, onDelete, onSendClick,
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Products</p>
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Product Name</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Indication</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Price</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Expiration Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {quotation.items?.map((item) => (
-                    <tr key={item.id} className="align-top">
-                      <td className="px-3 py-3 font-semibold text-gray-800 text-sm">{item.product_name}</td>
-                      <td className="px-3 py-3">
-                        {item.supplier_name && (
-                          <p className="text-sm font-medium text-gray-800">{item.supplier_name}/</p>
-                        )}
-                        <p className="text-sm text-gray-600">{item.description || (item.supplier_name ? "" : "—")}</p>
-                      </td>
-                      <td className="px-3 py-3">
-                        {item.tiers?.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {item.tiers.map((t, i) => {
-                              const range = t.max_qty
-                                ? `${t.min_qty}-${t.max_qty}`
-                                : `${t.min_qty}+`;
-                              return (
-                                <p key={i} className="text-sm font-medium text-gray-800 whitespace-nowrap">
-                                  {range} @ ₱{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 0 })}
-                                </p>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-sm font-medium text-gray-800">
-                            ₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-sm text-gray-600">{item.expiry_date || "—"}</td>
+              {quotation.quotation_type === "with_total" ? (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Product Name</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Indication</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Unit Price</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Qty</th>
+                      <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {quotation.items?.map((item) => (
+                      <tr key={item.id} className="align-top">
+                        <td className="px-3 py-3 font-semibold text-gray-800 text-sm">{item.product_name}</td>
+                        <td className="px-3 py-3">
+                          {item.supplier_name && (
+                            <p className="text-sm font-medium text-gray-800">{item.supplier_name}/</p>
+                          )}
+                          <p className="text-sm text-gray-600">{item.description || (item.supplier_name ? "" : "—")}</p>
+                          {item.expiry_date && (
+                            <p className="text-xs text-gray-400 mt-0.5">Exp: {item.expiry_date}</p>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right text-sm font-medium text-gray-800">
+                          ₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-3 py-3 text-right text-sm text-gray-700">{Number(item.quantity).toLocaleString()}</td>
+                        <td className="px-3 py-3 text-right text-sm font-semibold text-gray-800">
+                          ₱{(Number(item.unit_price) * Number(item.quantity)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-gray-50">
+                      <td colSpan={4} className="px-3 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Total</td>
+                      <td className="px-3 py-2.5 text-right text-sm font-bold text-gray-800">
+                        ₱{(quotation.items ?? []).reduce((s, i) => s + Number(i.unit_price) * Number(i.quantity), 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Product Name</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Indication</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Price</th>
+                      <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Expiration Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {quotation.items?.map((item) => (
+                      <tr key={item.id} className="align-top">
+                        <td className="px-3 py-3 font-semibold text-gray-800 text-sm">{item.product_name}</td>
+                        <td className="px-3 py-3">
+                          {item.supplier_name && (
+                            <p className="text-sm font-medium text-gray-800">{item.supplier_name}/</p>
+                          )}
+                          <p className="text-sm text-gray-600">{item.description || (item.supplier_name ? "" : "—")}</p>
+                        </td>
+                        <td className="px-3 py-3">
+                          {item.use_flat_price ? (
+                            <p className="text-sm font-medium text-gray-800">
+                              ₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                            </p>
+                          ) : item.tiers?.length > 0 ? (
+                            <div className="space-y-0.5">
+                              {item.tiers.map((t, i) => {
+                                const range = t.max_qty ? `${t.min_qty}-${t.max_qty}` : `${t.min_qty}+`;
+                                return (
+                                  <p key={i} className="text-sm font-medium text-gray-800 whitespace-nowrap">
+                                    {range} @ ₱{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 0 })}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-medium text-gray-800">
+                              ₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-600">{item.expiry_date || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

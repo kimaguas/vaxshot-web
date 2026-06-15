@@ -48,18 +48,19 @@ export default function Sidebar({ isOpen, onClose }) {
       `}
     >
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-gray-700 flex items-center justify-between">
-        <NavLink to="/" onClick={onClose}>
+      <div className="relative px-4 py-4 border-b border-gray-700 flex items-center justify-center">
+        <NavLink to="/" onClick={onClose} className="flex flex-col items-center gap-1">
           <img
             src="/logo.png"
             alt="Vaxshot"
             className="h-14 w-auto object-contain"
           />
+          <span className="text-xs font-semibold text-gray-300 tracking-wide uppercase">Vaxshot Web System</span>
         </NavLink>
         {/* Close button — mobile only */}
         <button
           onClick={onClose}
-          className="lg:hidden p-1 text-gray-400 hover:text-white transition-colors"
+          className="lg:hidden absolute right-4 p-1 text-gray-400 hover:text-white transition-colors"
         >
           <X size={20} />
         </button>
