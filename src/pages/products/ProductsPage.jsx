@@ -381,8 +381,43 @@ const ImportModal = ({ suppliers, onClose, onImport, importing }) => {
 
 // ── Product Row ───────────────────────────────────────────────────────────────
 
-const ProductRow = ({ catalog, canManage, onEdit, onDelete }) => {
+const ProductRow = ({ catalog, canManage, onEdit, onDelete, deleteConfirmId, setDeleteConfirmId }) => {
   const [expanded, setExpanded] = useState(false);
+
+  if (deleteConfirmId === catalog.id) {
+    return (
+      <tr>
+        <td colSpan={7} className="px-4 py-4">
+          <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-700">Delete this product?</p>
+                <p className="text-xs text-red-500 mt-0.5">
+                  "{catalog.brand_name}" will be permanently deleted. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+              >
+                Keep Product
+              </button>
+              <button
+                onClick={() => { setDeleteConfirmId(null); onDelete(catalog); }}
+                className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+              >
+                <Trash2 size={14} />
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
 
   return (
     <>
@@ -427,10 +462,7 @@ const ProductRow = ({ catalog, canManage, onEdit, onDelete }) => {
         </td>
         <td className="px-4 py-3">
           {canManage && (
-            <div
-              className="flex items-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => onEdit(catalog)}
                 className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -438,7 +470,7 @@ const ProductRow = ({ catalog, canManage, onEdit, onDelete }) => {
                 <Edit size={15} />
               </button>
               <button
-                onClick={() => onDelete(catalog)}
+                onClick={() => setDeleteConfirmId(catalog.id)}
                 className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <Trash2 size={15} />
@@ -493,7 +525,7 @@ export default function ProductsPage() {
   const [showModal, setShowModal]           = useState(false);
   const [showImport, setShowImport]         = useState(false);
   const [selected, setSelected]             = useState(null);
-
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const { data: suppliersData } = useQuery({
     queryKey: ["suppliers-list"],
     queryFn: async () => {
@@ -543,7 +575,7 @@ export default function ProductsPage() {
     mutationFn: (id) => api.delete(`/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(["products"]);
-      toast.success("Product deleted.");
+      toast.success("Product deleted successfully!");
     },
     onError: (err) =>
       toast.error(err.response?.data?.message || "Failed to delete product"),
@@ -576,12 +608,6 @@ export default function ProductsPage() {
       updateMutation.mutate({ id: selected.id, data: form });
     } else {
       createMutation.mutate(form);
-    }
-  };
-
-  const handleDelete = (catalog) => {
-    if (window.confirm(`Delete "${catalog.brand_name}"?`)) {
-      deleteMutation.mutate(catalog.id);
     }
   };
 
@@ -672,7 +698,9 @@ export default function ProductsPage() {
                     catalog={product}
                     canManage={canManage}
                     onEdit={(p) => { setSelected(p); setShowModal(true); }}
-                    onDelete={handleDelete}
+                    onDelete={(catalog) => deleteMutation.mutate(catalog.id)}
+                    deleteConfirmId={deleteConfirmId}
+                    setDeleteConfirmId={setDeleteConfirmId}
                   />
                 ))
               )}
@@ -700,6 +728,7 @@ export default function ProductsPage() {
           importing={importMutation.isPending}
         />
       )}
+
     </div>
   );
 }

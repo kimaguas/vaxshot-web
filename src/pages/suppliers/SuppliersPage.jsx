@@ -146,8 +146,9 @@ export default function SuppliersPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [showModal, setShowModal]         = useState(false);
+  const [selected, setSelected]           = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [page, setPage] = useState(1);
   const [formErrors, setFormErrors] = useState({});
 
@@ -292,73 +293,100 @@ export default function SuppliersPage() {
                 </td>
               </tr>
             ) : (
-              suppliers.map((supplier) => (
-                <tr
-                  key={supplier.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => { setSelected(supplier); setShowModal(true); }}
-                      className="text-sm font-medium text-blue-600 hover:underline text-left"
-                    >
-                      {supplier.company}
-                    </button>
-                    {supplier.address && (
-                      <p className="text-xs text-gray-500 truncate max-w-xs">
-                        {supplier.address}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {supplier.tin_no || "-"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {supplier.contact_person || "-"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {supplier.contact_no || "-"}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        supplier.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {supplier.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {hasPermission("edit_suppliers") && (
-                        <button
-                          onClick={() => {
-                            setSelected(supplier);
-                            setShowModal(true);
-                          }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
+              suppliers.map((supplier) =>
+                deleteConfirmId === supplier.id ? (
+                  <tr key={supplier.id}>
+                    <td colSpan={6} className="px-6 py-4">
+                      <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-700">Delete this supplier?</p>
+                            <p className="text-xs text-red-500 mt-0.5">
+                              "{supplier.company}" will be permanently deleted. This cannot be undone.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+                          >
+                            Keep Supplier
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirmId(null); deleteMutation.mutate(supplier.id); }}
+                            disabled={deleteMutation.isPending}
+                            className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Yes, Delete
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={supplier.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => { setSelected(supplier); setShowModal(true); }}
+                        className="text-sm font-medium text-blue-600 hover:underline text-left"
+                      >
+                        {supplier.company}
+                      </button>
+                      {supplier.address && (
+                        <p className="text-xs text-gray-500 truncate max-w-xs">
+                          {supplier.address}
+                        </p>
                       )}
-                      {hasPermission("delete_suppliers") && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`Delete ${supplier.company}?`)) {
-                              deleteMutation.mutate(supplier.id);
-                            }
-                          }}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {supplier.tin_no || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {supplier.contact_person || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {supplier.contact_no || "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          supplier.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {supplier.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {hasPermission("edit_suppliers") && (
+                          <button
+                            onClick={() => { setSelected(supplier); setShowModal(true); }}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        {hasPermission("delete_suppliers") && (
+                          <button
+                            onClick={() => setDeleteConfirmId(supplier.id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              )
             )}
           </tbody>
         </table>

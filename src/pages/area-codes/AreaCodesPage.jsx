@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -94,8 +94,9 @@ export default function AreaCodesPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const [search,    setSearch]    = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [selected,  setSelected]  = useState(null);
+  const [showModal, setShowModal]             = useState(false);
+  const [selected,  setSelected]              = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [page,      setPage]      = useState(1);
 
   const { data, isLoading } = useQuery({
@@ -205,7 +206,8 @@ export default function AreaCodesPage() {
               </tr>
             ) : (
               areaCodes.map((ac) => (
-                <tr key={ac.id} className="hover:bg-gray-50 transition-colors">
+                <React.Fragment key={ac.id}>
+                <tr className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
                       {ac.code}
@@ -238,11 +240,7 @@ export default function AreaCodesPage() {
                       )}
                       {hasPermission("delete_area_codes") && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Delete area code "${ac.code} - ${ac.name}"?`)) {
-                              deleteMutation.mutate(ac.id);
-                            }
-                          }}
+                          onClick={() => setDeleteConfirmId(ac.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
                           <Trash2 size={16} />
@@ -251,6 +249,40 @@ export default function AreaCodesPage() {
                     </div>
                   </td>
                 </tr>
+                {deleteConfirmId === ac.id && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4">
+                      <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-700">Delete this area code?</p>
+                            <p className="text-xs text-red-500 mt-0.5">
+                              "{ac.code} - {ac.name}" will be permanently deleted. This cannot be undone.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+                          >
+                            Keep Area Code
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirmId(null); deleteMutation.mutate(ac.id); }}
+                            disabled={deleteMutation.isPending}
+                            className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Yes, Delete
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))
             )}
           </tbody>

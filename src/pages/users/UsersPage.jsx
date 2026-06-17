@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -294,8 +294,9 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [showModal, setShowModal]             = useState(false);
+  const [selected, setSelected]               = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
@@ -410,7 +411,8 @@ export default function UsersPage() {
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                <React.Fragment key={user.id}>
+                <tr className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
@@ -457,11 +459,7 @@ export default function UsersPage() {
                       </button>
                       {user.id !== currentUser?.id && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Delete ${user.name}?`)) {
-                              deleteMutation.mutate(user.id);
-                            }
-                          }}
+                          onClick={() => setDeleteConfirmId(user.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
                           <Trash2 size={16} />
@@ -470,6 +468,40 @@ export default function UsersPage() {
                     </div>
                   </td>
                 </tr>
+                {deleteConfirmId === user.id && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4">
+                      <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-700">Delete this user?</p>
+                            <p className="text-xs text-red-500 mt-0.5">
+                              "{user.name}" will be permanently deleted. This cannot be undone.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-white transition-colors"
+                          >
+                            Keep User
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirmId(null); deleteMutation.mutate(user.id); }}
+                            disabled={deleteMutation.isPending}
+                            className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Yes, Delete
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))
             )}
           </tbody>
