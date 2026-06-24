@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -1308,6 +1308,7 @@ export default function QuotationsPage() {
   const [search, setSearch]                   = useState("");
   const [statusFilter, setStatusFilter]       = useState("");
   const [page, setPage]                       = useState(1);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["quotations", search, statusFilter, page],
@@ -1482,7 +1483,8 @@ export default function QuotationsPage() {
                 </tr>
               ) : (
                 quotations.map((q, index) => (
-                  <tr key={q.id} className="hover:bg-gray-50 transition-colors">
+                  <React.Fragment key={q.id}>
+                  <tr className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {((pagination?.current_page - 1) * pagination?.per_page) + index + 1}
                     </td>
@@ -1508,14 +1510,58 @@ export default function QuotationsPage() {
                     </td>
                     <td className="px-6 py-4"><StatusBadge status={q.status} /></td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleView(q)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Eye size={16} />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleView(q)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {hasPermission("delete_quotations") && (
+                          <button
+                            onClick={() => setDeleteConfirmId(deleteConfirmId === q.id ? null : q.id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
+                  {deleteConfirmId === q.id && (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-4 bg-red-50">
+                        <div className="border border-red-200 bg-white rounded-lg p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-semibold text-red-700">Delete this quotation?</p>
+                              <p className="text-xs text-red-500 mt-0.5">
+                                <span className="font-medium">"{q.quotation_number}"</span> will be permanently deleted. This cannot be undone.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="flex-1 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                            >
+                              Keep Quotation
+                            </button>
+                            <button
+                              onClick={() => { setDeleteConfirmId(null); deleteMutation.mutate(q.id); }}
+                              disabled={deleteMutation.isPending}
+                              className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center justify-center gap-1.5 disabled:opacity-60 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                              Yes, Delete
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>

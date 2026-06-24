@@ -396,7 +396,7 @@ export default function EmailTemplatesPage() {
                           {hasPermission("edit_email_templates") && (
                             <button
                               onClick={() => setEditTarget(t)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Edit template"
                             >
                               <Pencil size={15} />
@@ -405,7 +405,7 @@ export default function EmailTemplatesPage() {
                           {hasPermission("delete_email_templates") && (
                             <button
                               onClick={() => setDeleteConfirmId(t.id)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Delete template"
                             >
                               <Trash2 size={15} />

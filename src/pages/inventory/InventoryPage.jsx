@@ -56,7 +56,7 @@ function ProductCombobox({ value, onChange, supplierFilter }) {
     },
   });
 
-  const allProducts = comboData?.products || [];
+  const allProducts = (comboData?.products || []).slice().sort((a, b) => a.brand_name.localeCompare(b.brand_name));
   const filtered = inputText
     ? allProducts.filter(
         (p) =>

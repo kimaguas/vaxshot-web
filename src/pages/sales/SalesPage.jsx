@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
@@ -13,6 +13,8 @@ import {
   Pencil,
   X,
   Truck,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 import Pagination from "../../components/ui/Pagination";
@@ -298,22 +300,26 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
                     </div>
 
                     {selectedCatalog && (
-                      <div className="flex flex-wrap items-center gap-1.5 px-1">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                      <div className="flex flex-col gap-1 px-1">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border w-fit ${
                           (selectedCatalog.stock ?? 0) === 0
                             ? "bg-red-50 text-red-600 border-red-200"
                             : "bg-green-50 text-green-700 border-green-200"
                         }`}>
                           Stock: {(selectedCatalog.stock ?? 0).toLocaleString()} available
                         </span>
-                        {selectedCatalog.tiers?.map((t, ti) => (
-                          <span
-                            key={ti}
-                            className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full"
-                          >
-                            {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                          </span>
-                        ))}
+                        {selectedCatalog.tiers?.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedCatalog.tiers.map((t, ti) => (
+                              <span
+                                key={ti}
+                                className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full"
+                              >
+                                {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -501,11 +507,20 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
             <h3 className="text-lg font-semibold text-gray-800">{sale.sale_number}</h3>
             <p className="text-sm text-gray-500">{sale.customer}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={sale.status} />
-            <PaymentBadge status={sale.payment_status} />
-            <DeliveryBadge status={sale.delivery_status} />
-            {hasPermission("edit_sales") && (
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Status</span>
+              <StatusBadge status={sale.status} />
+            </div>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Payment</span>
+              <PaymentBadge status={sale.payment_status} />
+            </div>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Delivery</span>
+              <DeliveryBadge status={sale.delivery_status} />
+            </div>
+            {hasPermission("edit_sales") && sale.status !== "cancelled" && (
               <button
                 onClick={() => setShowEditForm(!showEditForm)}
                 title="Edit sale details"
@@ -655,7 +670,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                   {itemsForm.map((row, index) => {
                     const selectedProduct = products?.find((c) => c.id === parseInt(row.product_id));
                     return (
-                      <div key={index} className="space-y-1">
+                      <div key={index} className="space-y-1 pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
                         <div className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-5">
                             <ProductSelect
@@ -701,19 +716,23 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                           </div>
                         </div>
                         {selectedProduct && (
-                          <div className="flex flex-wrap items-center gap-1.5 px-1">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                          <div className="flex flex-col gap-1 px-1">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border w-fit ${
                               (selectedProduct.stock ?? 0) === 0
                                 ? "bg-red-50 text-red-600 border-red-200"
                                 : "bg-green-50 text-green-700 border-green-200"
                             }`}>
                               Stock: {(selectedProduct.stock ?? 0).toLocaleString()} available
                             </span>
-                            {selectedProduct.tiers?.map((t, ti) => (
-                              <span key={ti} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
-                                {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                              </span>
-                            ))}
+                            {selectedProduct.tiers?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {selectedProduct.tiers.map((t, ti) => (
+                                  <span key={ti} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                                    {t.tier_label}: &#8369;{Number(t.price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -766,7 +785,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                       <td className="px-3 py-2">{item.brand_name}</td>
                       <td className="px-3 py-2 text-xs text-gray-500">{item.lot_number}</td>
                       <td className="px-3 py-2 text-xs text-gray-500">{item.expiry_date}</td>
-                      <td className="px-3 py-2">{item.quantity}</td>
+                      <td className="px-3 py-2">{Number(item.quantity).toLocaleString()}</td>
                       <td className="px-3 py-2">₱{Number(item.unit_price).toLocaleString()}</td>
                       <td className="px-3 py-2 font-medium">₱{Number(item.total_price).toLocaleString()}</td>
                     </tr>
@@ -859,7 +878,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                             <tr key={di.id} className="text-gray-700">
                               <td className="py-0.5">{di.product_name}</td>
                               <td className="py-0.5 text-gray-500">{di.lot_number || "—"}</td>
-                              <td className="py-0.5 text-right font-medium">{di.quantity_delivered}</td>
+                              <td className="py-0.5 text-right font-medium">{di.quantity_delivered?.toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1156,6 +1175,15 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                 {showDeliveryForm ? "Hide Delivery" : "Record Delivery"}
               </button>
             )}
+            {sale.status === "confirmed" && hasPermission("cancel_sales") && (
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm flex items-center justify-center gap-2"
+              >
+                <XCircle size={16} />
+                Cancel Sale
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1187,9 +1215,10 @@ export default function SalesPage() {
   const [sortBy,    setSortBy]    = useState("id");
   const [sortOrder, setSortOrder] = useState("desc");
 
-  const [showCreate,    setShowCreate]    = useState(false);
-  const [selectedSale,  setSelectedSale]  = useState(null);
-  const [page,          setPage]          = useState(1);
+  const [showCreate,     setShowCreate]     = useState(false);
+  const [selectedSale,   setSelectedSale]   = useState(null);
+  const [page,           setPage]           = useState(1);
+  const [expandedSaleId, setExpandedSaleId] = useState(null);
 
   const { data: areaCodesData } = useQuery({
     queryKey: ["area-codes-list"],
@@ -1575,58 +1604,105 @@ export default function SalesPage() {
                     ? itemNames.join(", ")
                     : `${itemNames.slice(0, 2).join(", ")} +${itemNames.length - 2}`;
 
+                const isExpanded = expandedSaleId === sale.id;
+                const hasMultipleItems = (sale.items?.length ?? 0) > 1;
+
                 return (
-                  <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-500 w-12">
-                      {rowNo}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {sale.sale_date}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <button
-                        onClick={() => handleView(sale)}
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        {sale.invoice_number || sale.sale_number}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-800">
-                      {sale.customer}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-40">
-                      <span title={itemNames.join(", ")}>{itemsLabel}</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
-                      {totalQty}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800 whitespace-nowrap">
-                      ₱{Number(sale.total_amount).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-green-700 whitespace-nowrap">
-                      ₱{Number(sale.amount_paid).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-red-600 whitespace-nowrap">
-                      ₱{Number(sale.balance).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={sale.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <PaymentBadge status={sale.payment_status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <DeliveryBadge status={sale.delivery_status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleView(sale)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Eye size={16} />
-                      </button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={sale.id}>
+                    <tr
+                      className={`transition-colors cursor-pointer select-none ${isExpanded ? "bg-blue-50" : "hover:bg-gray-50"}`}
+                      onClick={() => setExpandedSaleId(isExpanded ? null : sale.id)}
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-500 w-12">
+                        {rowNo}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {sale.sale_date}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleView(sale); }}
+                          className="text-blue-600 hover:underline font-medium"
+                        >
+                          {sale.invoice_number || sale.sale_number}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-800">
+                        {sale.customer}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 max-w-40">
+                        <div className="flex items-center gap-1">
+                          {hasMultipleItems
+                            ? (isExpanded
+                                ? <ChevronDown size={14} className="text-blue-500 shrink-0" />
+                                : <ChevronRight size={14} className="text-gray-400 shrink-0" />)
+                            : null}
+                          <span title={itemNames.join(", ")}>{itemsLabel}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 font-medium">
+                        {Number(totalQty).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-800 whitespace-nowrap">
+                        ₱{Number(sale.total_amount).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-green-700 whitespace-nowrap">
+                        ₱{Number(sale.amount_paid).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-red-600 whitespace-nowrap">
+                        ₱{Number(sale.balance).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={sale.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <PaymentBadge status={sale.payment_status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <DeliveryBadge status={sale.delivery_status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleView(sale); }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Collapsible item details */}
+                    {isExpanded && sale.items?.length > 0 && (
+                      <tr className="bg-blue-50 border-t border-blue-100">
+                        <td colSpan={13} className="px-8 pb-3 pt-0">
+                          <table className="w-full text-sm border border-blue-100 rounded-lg overflow-hidden">
+                            <thead>
+                              <tr className="bg-blue-100 text-blue-700 text-xs uppercase tracking-wide">
+                                <th className="text-left px-3 py-2">Product</th>
+                                <th className="text-left px-3 py-2">Lot No</th>
+                                <th className="text-left px-3 py-2">Expiry</th>
+                                <th className="text-right px-3 py-2">Qty</th>
+                                <th className="text-right px-3 py-2">Unit Price</th>
+                                <th className="text-right px-3 py-2">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-blue-50 bg-white">
+                              {sale.items.map((item, i) => (
+                                <tr key={i}>
+                                  <td className="px-3 py-2 font-medium text-gray-800">{item.brand_name}</td>
+                                  <td className="px-3 py-2 text-gray-500">{item.lot_number || "—"}</td>
+                                  <td className="px-3 py-2 text-gray-500">{item.expiry_date || "—"}</td>
+                                  <td className="px-3 py-2 text-right text-gray-700">{Number(item.quantity).toLocaleString()}</td>
+                                  <td className="px-3 py-2 text-right text-gray-700">₱{Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                                  <td className="px-3 py-2 text-right font-semibold text-gray-800">₱{Number(item.total_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })
             )}
