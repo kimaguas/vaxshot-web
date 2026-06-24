@@ -71,6 +71,7 @@ const DeliveryBadge = ({ status }) => {
 const CreateSaleModal = ({ onClose, onSave, isPending }) => {
   const [form, setForm] = useState({
     customer_id: "",
+    area_code_id: "",
     sale_date: new Date().toISOString().split("T")[0],
     invoice_number: "",
     payment_method: "cash",
@@ -86,6 +87,16 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: areaCodesData } = useQuery({
+    queryKey: ["area-codes-list"],
+    queryFn: async () => {
+      const res = await api.get("/area-codes", { params: { list: 1 } });
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const areaCodes = areaCodesData?.area_codes ?? [];
 
   const { data: catalogsData } = useQuery({
     queryKey: ["catalogs-for-sale"],
@@ -162,19 +173,30 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
               <CustomerSelect
                 customers={customersData?.customers ?? []}
                 value={form.customer_id}
-                onChange={(val) => setForm({ ...form, customer_id: val })}
+                onChange={(val) => {
+                  const cust = customersData?.customers?.find(c => c.id === parseInt(val));
+                  setForm({ ...form, customer_id: val, area_code_id: cust?.area_code_id ? String(cust.area_code_id) : "" });
+                }}
                 required
                 placeholder="Search by name, code, or city..."
               />
-              {(() => {
-                const cust = customersData?.customers?.find(c => c.id === parseInt(form.customer_id));
-                return cust?.area_code ? (
-                  <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
-                    <span className="font-medium text-gray-600">Area:</span>
-                    {cust.area_code.code} — {cust.area_code.name}
-                  </p>
-                ) : null;
-              })()}
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Area Code
+              </label>
+              <select
+                value={form.area_code_id}
+                onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">— None —</option>
+                {areaCodes.map((ac) => (
+                  <option key={ac.id} value={String(ac.id)}>
+                    {ac.code} — {ac.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
