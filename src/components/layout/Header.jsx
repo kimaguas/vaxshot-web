@@ -1,5 +1,5 @@
 import { useAuth } from "../../context/AuthContext";
-import { LogOut, Bell, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -32,12 +32,7 @@ export default function Header({ title, onMenuToggle }) {
 
       {/* Right Side */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        {/* Notification Bell */}
-        <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-          <Bell size={20} />
-        </button>
-
-        {/* User Info — hide text on very small screens */}
+{/* User Info — hide text on very small screens */}
         <div className="hidden sm:flex items-center gap-3">
           <div className="text-right">
             <p className="text-sm font-medium text-gray-800 truncate max-w-30">{user?.name}</p>
