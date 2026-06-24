@@ -18,15 +18,6 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
     contact_no: customer?.contact_no || "",
     specialization: customer?.specialization || "",
     status: customer?.status || "active",
-    area_code_id: customer?.area_code_id || "",
-  });
-
-  const { data: areaCodesData } = useQuery({
-    queryKey: ["area-codes-list"],
-    queryFn: async () => {
-      const res = await api.get("/area-codes", { params: { list: 1 } });
-      return res.data;
-    },
   });
 
   const [selectedProvince, setSelectedProvince] = useState("");
@@ -229,25 +220,6 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-          </div>
-
-          {/* Area Code */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Area Code
-            </label>
-            <select
-              value={form.area_code_id}
-              onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">— Select Area Code —</option>
-              {areaCodesData?.area_codes?.map((ac) => (
-                <option key={ac.id} value={ac.id}>
-                  {ac.code} — {ac.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Status */}
