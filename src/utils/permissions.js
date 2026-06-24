@@ -167,5 +167,6 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_sales", "create_sales", "edit_sales", "confirm_sales",
     "view_quotations", "create_quotations", "edit_quotations", "send_quotations",
     "view_reports",
+    "view_area_codes",
   ],
 };
