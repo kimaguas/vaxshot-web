@@ -107,6 +107,10 @@ export const PERMISSION_MODULES = [
     module: "Activity Logs",
     permissions: [{ name: "view_activity_logs", label: "View Activity Logs" }],
   },
+  {
+    module: "Settings",
+    permissions: [{ name: "manage_settings", label: "Manage Settings" }],
+  },
 ];
 
 export const ROLE_PERMISSION_PRESETS = {
@@ -125,6 +129,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_area_codes", "create_area_codes", "edit_area_codes", "delete_area_codes",
     "view_users", "create_users", "edit_users", "delete_users",
     "view_activity_logs",
+    "manage_settings",
   ],
   manager: [
     "view_dashboard",

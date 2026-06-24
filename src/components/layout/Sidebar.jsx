@@ -15,6 +15,7 @@ import {
   Mail,
   X,
   Package,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -31,6 +32,7 @@ const navItems = [
   { label: "Area Codes",      path: "/area-codes",      icon: MapPin,          permission: "view_area_codes" },
   { label: "Users",           path: "/users",           icon: UserCog,         permission: "view_users" },
   { label: "Activity Logs",   path: "/activity-logs",   icon: ClipboardList,   permission: "view_activity_logs" },
+  { label: "Settings",        path: "/settings",         icon: Settings,        permission: "manage_settings" },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

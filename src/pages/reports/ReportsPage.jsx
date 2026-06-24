@@ -799,6 +799,7 @@ const CustomerReportTab = () => {
   );
   const [to, setTo] = useState(new Date().toISOString().split("T")[0]);
   const [params, setParams] = useState({ from, to });
+  const [search, setSearch] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["report-customers", params],
@@ -807,6 +808,110 @@ const CustomerReportTab = () => {
       return response.data;
     },
   });
+
+  const filtered = (data?.by_customer || []).filter(
+    (c) => !search || c.customer?.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const exportCustomerReport = async () => {
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Customer Report");
+
+    const HEADER_COLOR = "1F4E79";
+    const WHITE = "FFFFFFFF";
+
+    ws.columns = [
+      { width: 36 },
+      { width: 22 },
+      { width: 20 },
+      { width: 20 },
+      { width: 14 },
+      { width: 16 },
+      { width: 16 },
+      { width: 16 },
+    ];
+
+    ws.mergeCells("A1:H1");
+    Object.assign(ws.getCell("A1"), {
+      value: "CUSTOMER REPORT",
+      font: { bold: true, size: 14 },
+      alignment: { horizontal: "center" },
+    });
+
+    ws.mergeCells("A2:H2");
+    Object.assign(ws.getCell("A2"), {
+      value: `Period: ${params.from} to ${params.to}`,
+      alignment: { horizontal: "center" },
+    });
+
+    ws.addRow([]);
+
+    const headerRow = ws.addRow([
+      "CUSTOMER",
+      "SPECIALIZATION",
+      "CITY",
+      "PROVINCE",
+      "NO. OF SALES",
+      "TOTAL AMOUNT",
+      "TOTAL PAID",
+      "BALANCE",
+    ]);
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_COLOR } };
+      cell.font = { bold: true, color: { argb: WHITE } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = {
+        top: { style: "thin" }, bottom: { style: "thin" },
+        left: { style: "thin" }, right: { style: "thin" },
+      };
+    });
+    headerRow.height = 20;
+
+    filtered.forEach((c) => {
+      const row = ws.addRow([
+        c.customer,
+        c.specialization || "",
+        c.city || "",
+        c.province || "",
+        c.total_sales,
+        Number(c.total_amount),
+        Number(c.total_paid),
+        Number(c.balance),
+      ]);
+      [6, 7, 8].forEach((col) => {
+        row.getCell(col).numFmt = '#,##0.00';
+        row.getCell(col).alignment = { horizontal: "right" };
+      });
+      row.getCell(5).alignment = { horizontal: "right" };
+    });
+
+    // Totals row
+    const totalAmount = filtered.reduce((s, c) => s + Number(c.total_amount), 0);
+    const totalPaid   = filtered.reduce((s, c) => s + Number(c.total_paid), 0);
+    const totalBal    = filtered.reduce((s, c) => s + Number(c.balance), 0);
+    const totalRow = ws.addRow(["TOTAL", "", "", "", filtered.length, totalAmount, totalPaid, totalBal]);
+    [1, 5, 6, 7, 8].forEach((col) => { totalRow.getCell(col).font = { bold: true }; });
+    [6, 7, 8].forEach((col) => {
+      totalRow.getCell(col).numFmt = '#,##0.00';
+      totalRow.getCell(col).alignment = { horizontal: "right" };
+    });
+    totalRow.getCell(5).alignment = { horizontal: "right" };
+    totalRow.eachCell((cell) => { cell.border = { top: { style: "thin" } }; });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `customer_report_${params.from}_to_${params.to}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -824,55 +929,75 @@ const CustomerReportTab = () => {
         </div>
       ) : data ? (
         <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: "Customers", value: filtered.length },
+              { label: "Total Amount", value: `₱${filtered.reduce((s, c) => s + Number(c.total_amount), 0).toLocaleString()}` },
+              { label: "Total Paid",   value: `₱${filtered.reduce((s, c) => s + Number(c.total_paid),   0).toLocaleString()}` },
+              { label: "Total Balance",value: `₱${filtered.reduce((s, c) => s + Number(c.balance),       0).toLocaleString()}` },
+            ].map((card, i) => (
+              <div key={i} className="bg-blue-50 rounded-xl p-4">
+                <p className="text-sm text-gray-500">{card.label}</p>
+                <p className="text-xl font-bold text-blue-600 mt-1">{card.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Search + Export */}
+          <div className="flex items-center justify-between gap-3">
+            <input
+              type="text"
+              placeholder="Search customer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+            />
+            <button
+              onClick={exportCustomerReport}
+              className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Download size={14} />
+              Export XLS
+            </button>
+          </div>
+
+          {/* Table */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                    Customer
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                    Specialization
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                    City
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                    Total Sales
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                    Total Amount
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                    Balance
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {data.by_customer?.map((customer, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">
-                      {customer.customer}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {customer.specialization || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {customer.city || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {customer.total_sales}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-blue-600">
-                      ₱{Number(customer.total_amount).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-red-600">
-                      ₱{Number(customer.balance).toLocaleString()}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Customer</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Specialization</th>
+                    <th className="text-left px-4 py-3 font-semibold text-gray-600">City</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">No. of Sales</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">Total Amount</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">Total Paid</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">Balance</th>
                   </tr>
-                ))}
-              </tbody>
-            </table></div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.length > 0 ? filtered.map((customer, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{customer.customer}</td>
+                      <td className="px-4 py-3 text-gray-600">{customer.specialization || "-"}</td>
+                      <td className="px-4 py-3 text-gray-600">{customer.city || "-"}</td>
+                      <td className="px-4 py-3 text-right text-gray-600">{customer.total_sales}</td>
+                      <td className="px-4 py-3 text-right font-medium text-blue-600">₱{Number(customer.total_amount).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-green-600">₱{Number(customer.total_paid).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-red-600">₱{Number(customer.balance).toLocaleString()}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-gray-400">
+                        {search ? "No customers match your search" : "No data for selected period"}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : null}
