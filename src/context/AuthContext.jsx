@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
+import { queryClient } from "../main";
 
 const AuthContext = createContext(null);
 
@@ -39,6 +40,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
 
+    queryClient.clear();
+
     setToken(token);
     setUser(user);
 
@@ -51,6 +54,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
+      queryClient.clear();
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setToken(null);
