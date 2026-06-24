@@ -29,7 +29,7 @@ export default function MainLayout() {
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-30 bg-black bg-opacity-30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

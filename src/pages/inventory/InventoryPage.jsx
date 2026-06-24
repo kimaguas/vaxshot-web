@@ -19,6 +19,8 @@ function isExpired(dateStr) {
 }
 
 function StockBadge({ stock, maintainingStock }) {
+  if (stock < 0)
+    return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-200 text-red-800">Negative (Backorder)</span>;
   if (stock === 0)
     return <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">Out of Stock</span>;
   if (maintainingStock > 0 && stock <= maintainingStock)
@@ -164,7 +166,7 @@ const BatchModal = ({ product, onClose }) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <div className="p-5 border-b border-gray-200 flex justify-between items-center">
           <div>
@@ -270,7 +272,7 @@ const AdjustModal = ({ product, onClose, onSave, isSaving }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="p-5 border-b border-gray-200 flex justify-between items-center">
           <div>
@@ -533,7 +535,7 @@ export default function InventoryPage() {
                         </button>
                       </td>
                       <td className="px-5 py-4 font-mono text-gray-600 text-xs">{product.lot_no || "—"}</td>
-                      <td className="px-5 py-4 text-right font-semibold text-gray-800">{stock.toLocaleString("en-PH")}</td>
+                      <td className={`px-5 py-4 text-right font-semibold ${stock < 0 ? "text-red-600" : "text-gray-800"}`}>{stock.toLocaleString("en-PH")}</td>
                       <td className="px-5 py-4 text-right text-gray-500">{minStock || "—"}</td>
                       <td className="px-5 py-4">
                         <StockBadge stock={stock} maintainingStock={minStock} />

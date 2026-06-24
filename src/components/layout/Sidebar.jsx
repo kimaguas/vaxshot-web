@@ -20,12 +20,12 @@ import {
 
 const navItems = [
   { label: "Dashboard",       path: "/",                icon: LayoutDashboard, permission: "view_dashboard" },
+  { label: "Sales",           path: "/sales",           icon: ShoppingCart,    permission: "view_sales" },
   { label: "Suppliers",       path: "/suppliers",       icon: Truck,           permission: "view_suppliers" },
   { label: "Products",         path: "/products",         icon: Tag,           permission: "view_products" },
   { label: "Customers",       path: "/customers",       icon: Users,           permission: "view_customers" },
   { label: "Inventory",       path: "/inventory",       icon: Package,         permission: "view_inventory" },
   { label: "Purchase Orders", path: "/purchase-orders", icon: ClipboardList,   permission: "view_purchase_orders" },
-  { label: "Sales",           path: "/sales",           icon: ShoppingCart,    permission: "view_sales" },
   { label: "Quotations",       path: "/quotations",       icon: FileText,     permission: "view_quotations" },
   { label: "Email Templates",  path: "/email-templates",  icon: Mail,         permission: "view_email_templates" },
   { label: "Reports",          path: "/reports",          icon: BarChart3,    permission: "view_reports" },

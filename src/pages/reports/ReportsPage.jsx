@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../api/axios";
 import {
@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { FileText, Package, ShoppingCart, Users, Clock, CreditCard, Download } from "lucide-react";
+import Pagination from "../../components/ui/Pagination";
 
 const tabs = [
   { id: "sales", label: "Sales Report", icon: ShoppingCart },
@@ -1121,16 +1122,24 @@ const POReportTab = () => {
 };
 
 // Payments Report Tab
+const PER_PAGE = 15;
+
 const PaymentsReportTab = () => {
   const [aging, setAging] = useState("");
+  const [paymentView, setPaymentView] = useState("unpaid"); // "unpaid" | "paid"
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [aging, paymentView, search]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["report-payments", aging],
+    queryKey: ["report-payments", aging, paymentView],
     queryFn: async () => {
-      const response = await api.get("/reports/payments", {
-        params: aging ? { aging } : {},
-      });
+      const params = paymentView === "paid"
+        ? { status: "paid" }
+        : aging ? { aging } : {};
+      const response = await api.get("/reports/payments", { params });
       return response.data;
     },
   });
@@ -1141,6 +1150,11 @@ const PaymentsReportTab = () => {
     { value: "30", label: "> 1 Month" },
     { value: "60", label: "> 2 Months" },
   ];
+
+  const switchView = (view) => {
+    setPaymentView(view);
+    if (view === "paid") setAging("");
+  };
 
   return (
     <div className="space-y-6">
@@ -1153,21 +1167,47 @@ const PaymentsReportTab = () => {
           onChange={(e) => setSearch(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
         />
-        <div className="flex flex-wrap gap-2">
-        {agingFilters.map((f) => (
+        {/* View toggle: Unpaid / Paid */}
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
           <button
-            key={f.value}
-            onClick={() => setAging(f.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-              aging === f.value
-                ? "bg-orange-600 text-white border-orange-600"
-                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+            onClick={() => switchView("unpaid")}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              paymentView === "unpaid"
+                ? "bg-orange-600 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
             }`}
           >
-            {f.label}
+            Unpaid
           </button>
-        ))}
+          <button
+            onClick={() => switchView("paid")}
+            className={`px-4 py-2 text-sm font-medium border-l border-gray-300 transition-colors ${
+              paymentView === "paid"
+                ? "bg-green-600 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Paid
+          </button>
         </div>
+        {/* Aging filters — only when viewing unpaid */}
+        {paymentView === "unpaid" && (
+          <div className="flex flex-wrap gap-2">
+            {agingFilters.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setAging(f.value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  aging === f.value
+                    ? "bg-orange-600 text-white border-orange-600"
+                    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -1178,46 +1218,40 @@ const PaymentsReportTab = () => {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                label: "Unpaid Sales",
-                value: data.summary?.total_unpaid,
-                bg: "bg-orange-50",
-                color: "text-orange-600",
-              },
-              {
-                label: "Total Balance Due",
-                value: `₱${Number(data.summary?.total_balance || 0).toLocaleString()}`,
-                bg: "bg-red-50",
-                color: "text-red-600",
-              },
-              {
-                label: "> 15 Days",
-                value: data.summary?.over_15_days,
-                bg: "bg-yellow-50",
-                color: "text-yellow-600",
-              },
-              {
-                label: "> 30 Days",
-                value: data.summary?.over_30_days,
-                bg: "bg-red-50",
-                color: "text-red-700",
-              },
-            ].map((card, i) => (
+            {(paymentView === "paid" ? [
+              { label: "Paid Sales",        value: data.summary?.total_paid,                                            bg: "bg-green-50",  color: "text-green-600" },
+              { label: "Total Collected",   value: `₱${Number(data.summary?.total_paid_amount || 0).toLocaleString()}`, bg: "bg-green-50",  color: "text-green-700" },
+              { label: "Unpaid Sales",      value: data.summary?.total_unpaid,                                          bg: "bg-orange-50", color: "text-orange-600" },
+              { label: "Total Balance Due", value: `₱${Number(data.summary?.total_balance || 0).toLocaleString()}`,     bg: "bg-red-50",    color: "text-red-600" },
+            ] : [
+              { label: "Unpaid Sales",      value: data.summary?.total_unpaid,                                          bg: "bg-orange-50",  color: "text-orange-600" },
+              { label: "Total Balance Due", value: `₱${Number(data.summary?.total_balance || 0).toLocaleString()}`,     bg: "bg-red-50",     color: "text-red-600" },
+              { label: "> 15 Days",         value: data.summary?.over_15_days,                                          bg: "bg-yellow-50",  color: "text-yellow-600" },
+              { label: "> 30 Days",         value: data.summary?.over_30_days,                                          bg: "bg-red-50",     color: "text-red-700" },
+            ]).map((card, i) => (
               <div key={i} className={`${card.bg} rounded-xl p-4`}>
                 <p className="text-sm text-gray-500">{card.label}</p>
-                <p className={`text-xl font-bold mt-1 ${card.color}`}>
-                  {card.value}
-                </p>
+                <p className={`text-xl font-bold mt-1 ${card.color}`}>{card.value}</p>
               </div>
             ))}
           </div>
 
-          {/* Unpaid Sales Table */}
+          {/* Sales Table */}
           {(() => {
             const filtered = (data.sales || []).filter((s) =>
               !search || s.customer?.toLowerCase().includes(search.toLowerCase())
             );
+            const totalPages = Math.ceil(filtered.length / PER_PAGE);
+            const safePage = Math.min(page, totalPages || 1);
+            const paginated = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+            const paginationObj = filtered.length > 0 ? {
+              current_page: safePage,
+              last_page: totalPages,
+              from: (safePage - 1) * PER_PAGE + 1,
+              to: Math.min(safePage * PER_PAGE, filtered.length),
+              total: filtered.length,
+            } : null;
+
             return filtered.length > 0 ? (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
@@ -1237,7 +1271,7 @@ const PaymentsReportTab = () => {
                         Sale Date
                       </th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                        Days Overdue
+                        {paymentView === "paid" ? "Days Since Sale" : "Days Overdue"}
                       </th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
                         Total
@@ -1254,7 +1288,7 @@ const PaymentsReportTab = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filtered.map((sale, i) => (
+                    {paginated.map((sale, i) => (
                       <tr key={i} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-blue-600">
                           {sale.sale_number}
@@ -1308,12 +1342,13 @@ const PaymentsReportTab = () => {
                   </tbody>
                 </table>
               </div>
+              <Pagination pagination={paginationObj} onPageChange={setPage} />
             </div>
             ) : (
               <div className="text-center py-12">
                 <CreditCard size={40} className="mx-auto text-gray-300 mb-2" />
                 <p className="text-gray-400">
-                  {search ? "No results match your search" : "No unpaid sales found"}
+                  {search ? "No results match your search" : paymentView === "paid" ? "No paid sales found" : "No unpaid sales found"}
                 </p>
               </div>
             );

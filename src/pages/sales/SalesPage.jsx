@@ -15,10 +15,12 @@ import {
   Truck,
   ChevronDown,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 
 import Pagination from "../../components/ui/Pagination";
 import ProductSelect from "../../components/ui/ProductSelect";
+import CustomerSelect from "../../components/ui/CustomerSelect";
 import { useAuth } from "../../context/AuthContext";
 
 const StatusBadge = ({ status }) => {
@@ -79,9 +81,10 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
   const { data: customersData } = useQuery({
     queryKey: ["customers-list"],
     queryFn: async () => {
-      const response = await api.get("/customers");
+      const response = await api.get("/customers", { params: { per_page: 500 } });
       return response.data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: catalogsData } = useQuery({
@@ -142,7 +145,7 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">
@@ -156,21 +159,13 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Customer *
               </label>
-              <select
+              <CustomerSelect
+                customers={customersData?.customers ?? []}
                 value={form.customer_id}
-                onChange={(e) =>
-                  setForm({ ...form, customer_id: e.target.value })
-                }
+                onChange={(val) => setForm({ ...form, customer_id: val })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Customer</option>
-                {customersData?.customers?.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.customer_id ? `[${c.customer_id}] ${c.name}` : c.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Search by name, code, or city..."
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -356,7 +351,7 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
 };
 
 // View Sale Modal
-const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onUpdateItems, onDelivery, isDeliverying, products }) => {
+const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onUpdateItems, onDelivery, isDeliverying, products, forceConfirmReady }) => {
   const { hasPermission } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -498,7 +493,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
@@ -1127,6 +1122,25 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
             </div>
           )}
 
+          {/* Backorder warning — shown after a failed confirm */}
+          {forceConfirmReady && sale.status === "draft" && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
+              <AlertTriangle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-800">Insufficient stock</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Confirm anyway as a backorder? Stock will go negative and will be covered when the purchase order is received.
+                </p>
+              </div>
+              <button
+                onClick={() => onConfirm(sale.id, true)}
+                className="flex-shrink-0 px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600"
+              >
+                Force Confirm
+              </button>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-3 pt-2 flex-wrap">
             <button
@@ -1139,7 +1153,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               <>
                 {hasPermission("confirm_sales") && (
                   <button
-                    onClick={() => onConfirm(sale.id)}
+                    onClick={() => onConfirm(sale.id, false)}
                     className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center justify-center gap-2"
                   >
                     <CheckCircle size={16} />
@@ -1309,15 +1323,23 @@ export default function SalesPage() {
     }
   };
 
+  const [forceConfirmSaleId, setForceConfirmSaleId] = useState(null);
+
   const confirmMutation = useMutation({
-    mutationFn: (id) => api.post(`/sales/${id}/confirm`),
-    onSuccess: (_, id) => {
+    mutationFn: ({ id, force }) => api.post(`/sales/${id}/confirm`, { force: !!force }),
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries(["sales"]);
       toast.success("Sale confirmed!");
+      setForceConfirmSaleId(null);
       refreshSale(id);
     },
-    onError: (err) =>
-      toast.error(err.response?.data?.message || "Failed to confirm sale"),
+    onError: (err, { id }) => {
+      const msg = err.response?.data?.message || "Failed to confirm sale";
+      toast.error(msg);
+      if (msg.startsWith("Insufficient stock")) {
+        setForceConfirmSaleId(id);
+      }
+    },
   });
 
   const cancelMutation = useMutation({
@@ -1725,7 +1747,8 @@ export default function SalesPage() {
         <ViewSaleModal
           sale={selectedSale}
           onClose={() => setSelectedSale(null)}
-          onConfirm={(id) => confirmMutation.mutate(id)}
+          onConfirm={(id, force) => confirmMutation.mutate({ id, force })}
+          forceConfirmReady={forceConfirmSaleId === selectedSale?.id}
           onCancel={(id) => cancelMutation.mutate(id)}
           onPayment={(saleId, data) => paymentMutation.mutate({ saleId, data })}
           onUpdate={(id, data) => updateMutation.mutate({ id, data })}

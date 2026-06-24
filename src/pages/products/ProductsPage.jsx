@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Upload,
   X,
+  Download,
 } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
@@ -64,7 +65,7 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full sm:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">
@@ -302,6 +303,7 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
 const ImportModal = ({ suppliers, onClose, onImport, importing }) => {
   const fileRef = useRef();
   const [supplierId, setSupplierId] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -310,8 +312,81 @@ const ImportModal = ({ suppliers, onClose, onImport, importing }) => {
     onImport({ file: fileRef.current.files[0], supplier_id: supplierId });
   };
 
+  const downloadTemplate = async () => {
+    setDownloading(true);
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Price List");
+
+      const headers = [
+        { header: "brand_name",       key: "brand_name",       width: 28 },
+        { header: "min_qty",          key: "min_qty",          width: 10 },
+        { header: "max_qty",          key: "max_qty",          width: 10 },
+        { header: "price",            key: "price",            width: 12 },
+        { header: "indication",       key: "indication",       width: 24 },
+        { header: "lot_no",           key: "lot_no",           width: 14 },
+        { header: "acquisition_cost", key: "acquisition_cost", width: 18 },
+        { header: "expiry_date",      key: "expiry_date",      width: 14 },
+        { header: "effective_date",   key: "effective_date",   width: 14 },
+      ];
+      ws.columns = headers;
+
+      // Style header row
+      const headerRow = ws.getRow(1);
+      headerRow.eachCell((cell, col) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } };
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.border = { bottom: { style: "thin", color: { argb: "FF2E75B6" } } };
+        // Mark optional columns with lighter header
+        if (col > 4) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2E75B6" } };
+        }
+      });
+      headerRow.height = 22;
+
+      // Sample rows (two tiers for the same product, then a single-tier product)
+      const today = new Date().toISOString().split("T")[0];
+      const samples = [
+        { brand_name: "Amoxicillin 500mg Cap", min_qty: 1,   max_qty: 49,  price: 8.50,  indication: "Antibiotic", lot_no: "LOT-001", acquisition_cost: 6.00, expiry_date: "2027-12-31", effective_date: today },
+        { brand_name: "Amoxicillin 500mg Cap", min_qty: 50,  max_qty: "",  price: 7.00,  indication: "Antibiotic", lot_no: "LOT-001", acquisition_cost: 6.00, expiry_date: "2027-12-31", effective_date: today },
+        { brand_name: "Paracetamol 500mg Tab", min_qty: 1,   max_qty: "",  price: 3.25,  indication: "Analgesic",  lot_no: "",        acquisition_cost: 2.00, expiry_date: "2028-06-30", effective_date: today },
+      ];
+      samples.forEach((row, i) => {
+        const r = ws.addRow(row);
+        r.eachCell((cell) => {
+          cell.alignment = { vertical: "middle" };
+          cell.fill = {
+            type: "pattern", pattern: "solid",
+            fgColor: { argb: i % 2 === 0 ? "FFF5F9FF" : "FFFFFFFF" },
+          };
+        });
+      });
+
+      // Notes row
+      ws.addRow([]);
+      const noteRow = ws.addRow(["* Required: brand_name, min_qty, price   |   Optional: all other columns   |   Leave max_qty blank for the last (unlimited) tier   |   Rows with the same brand_name are grouped into one product."]);
+      noteRow.getCell(1).font = { italic: true, color: { argb: "FF888888" }, size: 9 };
+      ws.mergeCells(`A${noteRow.number}:I${noteRow.number}`);
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "price_list_template.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to generate template");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">Import Price List</h3>
@@ -354,6 +429,15 @@ const ImportModal = ({ suppliers, onClose, onImport, importing }) => {
               <p><span className="font-medium text-gray-700">Required columns:</span> brand_name, min_qty, price</p>
               <p><span className="font-medium text-gray-700">Optional columns:</span> max_qty, indication, lot_no, acquisition_cost, expiry_date, effective_date</p>
               <p className="text-gray-400">One row per tier. Rows with the same brand_name are grouped into one product. Leave max_qty blank for the last (unlimited) tier.</p>
+              <button
+                type="button"
+                onClick={downloadTemplate}
+                disabled={downloading}
+                className="mt-2 flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
+              >
+                <Download size={13} />
+                {downloading ? "Generating…" : "Download Excel Template"}
+              </button>
             </div>
           </div>
 
