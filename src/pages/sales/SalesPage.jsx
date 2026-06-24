@@ -498,7 +498,18 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
     or_number:      sale.or_number      || "",
     payment_method: sale.payment_method || "cash",
     notes:          sale.notes          || "",
+    area_code_id:   sale.area_code_id   ? String(sale.area_code_id) : "",
   });
+
+  const { data: editAreaCodesData } = useQuery({
+    queryKey: ["area-codes-list"],
+    queryFn: async () => {
+      const res = await api.get("/area-codes", { params: { list: 1 } });
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const editAreaCodes = editAreaCodesData?.area_codes ?? [];
 
   const handlePayment = (e) => {
     e.preventDefault();
@@ -610,6 +621,21 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                     onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Area Code</label>
+                  <select
+                    value={editForm.area_code_id}
+                    onChange={(e) => setEditForm({ ...editForm, area_code_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">— None —</option>
+                    {editAreaCodes.map((ac) => (
+                      <option key={ac.id} value={String(ac.id)}>
+                        {ac.code} — {ac.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="flex gap-2">
