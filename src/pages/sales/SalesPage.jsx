@@ -166,6 +166,15 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
                 required
                 placeholder="Search by name, code, or city..."
               />
+              {(() => {
+                const cust = customersData?.customers?.find(c => c.id === parseInt(form.customer_id));
+                return cust?.area_code ? (
+                  <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+                    <span className="font-medium text-gray-600">Area:</span>
+                    {cust.area_code.code} — {cust.area_code.name}
+                  </p>
+                ) : null;
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
