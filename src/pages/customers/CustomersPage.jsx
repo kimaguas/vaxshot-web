@@ -26,7 +26,11 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
 
   // Load initial values if editing
   useEffect(() => {
-    if (customer?.province) {
+    if (customer?.province === "Metro Manila") {
+      setSelectedProvince("NCR");
+      setFilteredCities(citiesMunicipalities.filter((c) => c.province === null));
+      if (customer?.city) setSelectedCity(customer.city);
+    } else if (customer?.province) {
       const province = provinces.find((p) => p.name === customer.province);
       if (province) {
         setSelectedProvince(province.code);
@@ -43,20 +47,20 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
 
   const handleProvinceChange = (e) => {
     const provCode = e.target.value;
-    const province = provinces.find((p) => p.code === provCode);
     setSelectedProvince(provCode);
     setSelectedCity("");
     setFilteredCities([]);
-    setForm({
-      ...form,
-      province: province?.name || "",
-      city: "",
-      barangay: "",
-    });
-    if (provCode) {
-      setFilteredCities(
-        citiesMunicipalities.filter((c) => c.province === provCode),
-      );
+    if (provCode === "NCR") {
+      setForm({ ...form, province: "Metro Manila", city: "", barangay: "" });
+      setFilteredCities(citiesMunicipalities.filter((c) => c.province === null));
+    } else {
+      const province = provinces.find((p) => p.code === provCode);
+      setForm({ ...form, province: province?.name || "", city: "", barangay: "" });
+      if (provCode) {
+        setFilteredCities(
+          citiesMunicipalities.filter((c) => c.province === provCode),
+        );
+      }
     }
   };
 
@@ -144,6 +148,7 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select Province</option>
+              <option value="NCR">Metro Manila</option>
               {provinces
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((p) => (
