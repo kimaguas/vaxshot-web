@@ -160,4 +160,12 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_area_codes", "create_area_codes", "edit_area_codes",
   ],
   viewer: ["view_dashboard", "view_reports"],
+  sales_rep: [
+    "view_dashboard",
+    "view_products",
+    "view_customers", "create_customers", "edit_customers",
+    "view_sales", "create_sales", "edit_sales", "confirm_sales",
+    "view_quotations", "create_quotations", "edit_quotations", "send_quotations",
+    "view_reports",
+  ],
 };

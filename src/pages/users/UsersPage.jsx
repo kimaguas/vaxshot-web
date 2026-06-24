@@ -11,13 +11,14 @@ import {
 } from "../../utils/permissions";
 
 const roleColors = {
-  admin:   "bg-purple-100 text-purple-700",
-  manager: "bg-blue-100 text-blue-700",
-  staff:   "bg-green-100 text-green-700",
-  viewer:  "bg-gray-100 text-gray-600",
+  admin:     "bg-purple-100 text-purple-700",
+  manager:   "bg-blue-100 text-blue-700",
+  staff:     "bg-green-100 text-green-700",
+  viewer:    "bg-gray-100 text-gray-600",
+  sales_rep: "bg-orange-100 text-orange-700",
 };
 
-const UserModal = ({ user, onClose, onSave }) => {
+const UserModal = ({ user, onClose, onSave, areaCodes }) => {
   const [form, setForm] = useState({
     name:                  user?.name || "",
     username:              user?.username || "",
@@ -28,13 +29,15 @@ const UserModal = ({ user, onClose, onSave }) => {
     permissions:           user?.permissions
       ? [...user.permissions]
       : [...(ROLE_PERMISSION_PRESETS["staff"] || [])],
+    area_code_id:          user?.area_code_id || "",
   });
 
   const handleRoleChange = (newRole) => {
     setForm({
       ...form,
-      role:        newRole,
-      permissions: [...(ROLE_PERMISSION_PRESETS[newRole] || [])],
+      role:         newRole,
+      permissions:  [...(ROLE_PERMISSION_PRESETS[newRole] || [])],
+      area_code_id: newRole === "sales_rep" ? form.area_code_id : "",
     });
   };
 
@@ -162,11 +165,37 @@ const UserModal = ({ user, onClose, onSave }) => {
                 <option value="manager">Manager</option>
                 <option value="staff">Staff</option>
                 <option value="viewer">Viewer</option>
+                <option value="sales_rep">Sales Rep</option>
               </select>
               <p className="text-xs text-gray-400 mt-1">
                 Selecting a role auto-fills the permissions below. You can then customise them individually.
               </p>
             </div>
+
+            {/* Area Code — only for Sales Rep */}
+            {form.role === "sales_rep" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Area Code *
+                </label>
+                <select
+                  value={form.area_code_id}
+                  onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select area code</option>
+                  {areaCodes.map((ac) => (
+                    <option key={ac.id} value={ac.id}>
+                      {ac.code} — {ac.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Sales Rep will only see sales from customers in this area.
+                </p>
+              </div>
+            )}
 
             {/* Permission checklist */}
             <div>
@@ -307,6 +336,16 @@ export default function UsersPage() {
     },
   });
 
+  const { data: areaCodesData } = useQuery({
+    queryKey: ["area-codes-list"],
+    queryFn: async () => {
+      const res = await api.get("/area-codes", { params: { list: 1 } });
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const areaCodes = areaCodesData?.area_codes || [];
+
   const createMutation = useMutation({
     mutationFn: (data) => api.post("/users", data),
     onSuccess: () => {
@@ -431,13 +470,20 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                        roleColors[user.role] || roleColors.viewer
-                      }`}
-                    >
-                      {user.role}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize w-fit ${
+                          roleColors[user.role] || roleColors.viewer
+                        }`}
+                      >
+                        {user.role === "sales_rep" ? "Sales Rep" : user.role}
+                      </span>
+                      {user.role === "sales_rep" && user.area_code && (
+                        <span className="text-xs text-gray-500">
+                          {user.area_code.code} — {user.area_code.name}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-xs text-gray-500">
@@ -518,6 +564,7 @@ export default function UsersPage() {
             setSelected(null);
           }}
           onSave={handleSave}
+          areaCodes={areaCodes}
         />
       )}
     </div>
