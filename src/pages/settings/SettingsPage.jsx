@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   FileText,
   Database,
+  Archive,
   X,
 } from "lucide-react";
 
@@ -43,6 +44,12 @@ const GROUP_META = {
     color: "text-red-600",
     bg: "bg-red-50",
     border: "border-red-200",
+  },
+  products: {
+    icon: Archive,
+    color: "text-orange-600",
+    bg: "bg-orange-50",
+    border: "border-orange-200",
   },
 };
 
