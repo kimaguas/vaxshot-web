@@ -499,6 +499,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
   const [editForm, setEditForm] = useState({
     invoice_number: sale.invoice_number || "",
     or_number:      sale.or_number      || "",
+    sale_date:      sale.sale_date      || "",
     payment_method: sale.payment_method || "cash",
     notes:          sale.notes          || "",
     area_code_id:   sale.area_code_id   ? String(sale.area_code_id) : "",
@@ -604,6 +605,17 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                {sale.status === "draft" && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Sale Date</label>
+                    <input
+                      type="date"
+                      value={editForm.sale_date}
+                      onChange={(e) => setEditForm({ ...editForm, sale_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
                   <select
