@@ -7,7 +7,7 @@ import { Plus, Search, Edit, Trash2, Users } from "lucide-react";
 import Pagination from "../../components/ui/Pagination";
 import { useAuth } from "../../context/AuthContext";
 
-const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError }) => {
+const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError, user, areaCodes }) => {
   const [form, setForm] = useState({
     customer_id: customer?.customer_id || "",
     name: customer?.name || "",
@@ -18,6 +18,7 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
     contact_no: customer?.contact_no || "",
     specialization: customer?.specialization || "",
     status: customer?.status || "active",
+    area_code_id: customer?.area_code_id || "",
   });
 
   const [selectedProvince, setSelectedProvince] = useState("");
@@ -227,6 +228,38 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
             </div>
           </div>
 
+          {/* Area Code */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Area Code
+            </label>
+            {user?.role === "sales_rep" ? (
+              <input
+                type="text"
+                value={areaCodes.find((a) => a.id === (user?.area_code_id))
+                  ? `${areaCodes.find((a) => a.id === user.area_code_id).code} — ${areaCodes.find((a) => a.id === user.area_code_id).name}`
+                  : customer?.area_code
+                    ? `${customer.area_code.code} — ${customer.area_code.name}`
+                    : "Assigned by your territory"}
+                disabled
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+              />
+            ) : (
+              <select
+                value={form.area_code_id}
+                onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">— No Area Code —</option>
+                {areaCodes.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.code} — {a.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -265,7 +298,7 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError })
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal]             = useState(false);
   const [selected, setSelected]               = useState(null);
@@ -282,6 +315,12 @@ export default function CustomersPage() {
       return response.data;
     },
   });
+
+  const { data: areaCodesData } = useQuery({
+    queryKey: ["area-codes-list"],
+    queryFn: () => api.get("/area-codes", { params: { list: 1 } }).then((r) => r.data),
+  });
+  const areaCodes = areaCodesData?.area_codes ?? [];
 
   const createMutation = useMutation({
     mutationFn: (data) => api.post("/customers", data),
@@ -394,6 +433,9 @@ export default function CustomersPage() {
                 Specialization
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
+                Area Code
+              </th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
                 Status
               </th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">
@@ -404,13 +446,13 @@ export default function CustomersPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="text-center py-12">
+                <td colSpan={8} className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                 </td>
               </tr>
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-12">
+                <td colSpan={8} className="text-center py-12">
                   <Users size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-gray-400">No customers found</p>
                 </td>
@@ -445,6 +487,15 @@ export default function CustomersPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {customer.specialization || "-"}
+                  </td>
+                  <td className="px-6 py-4">
+                    {customer.area_code ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        {customer.area_code.code}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -483,7 +534,7 @@ export default function CustomersPage() {
                 </tr>
                 {deleteConfirmId === customer.id && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4">
+                    <td colSpan={8} className="px-6 py-4">
                       <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
                         <div className="flex items-start gap-3">
                           <Trash2 size={18} className="text-red-500 mt-0.5 shrink-0" />
@@ -534,6 +585,8 @@ export default function CustomersPage() {
           onSave={handleSave}
           errors={formErrors}
           onClearError={(field) => setFormErrors((prev) => ({ ...prev, [field]: undefined }))}
+          user={user}
+          areaCodes={areaCodes}
         />
       )}
     </div>

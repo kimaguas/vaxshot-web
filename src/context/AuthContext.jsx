@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }) => {
   const isManager = () => user?.role === "manager";
   const isStaff = () => user?.role === "staff";
   const isViewer = () => user?.role === "viewer";
+  const isSalesRep = () => user?.role === "sales_rep";
 
   const hasPermission = (permission) =>
     Array.isArray(user?.permissions) && user.permissions.includes(permission);
@@ -82,6 +83,7 @@ export const AuthProvider = ({ children }) => {
         isManager,
         isStaff,
         isViewer,
+        isSalesRep,
         hasPermission,
       }}
     >
