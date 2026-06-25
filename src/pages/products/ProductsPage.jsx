@@ -573,18 +573,18 @@ const ProductRow = ({ catalog, canManage, onEdit, onDelete, deleteConfirmId, set
         <tr className="bg-blue-50">
           <td colSpan={7} className="px-4 py-3">
             <div className="overflow-x-auto">
-              <table className="w-auto text-sm">
+              <table className="w-full sm:w-auto sm:min-w-55 text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500 border-b border-blue-200">
-                    <th className="text-left py-1 pr-3">Quantity Tier</th>
-                    <th className="text-right py-1">Price (PHP)</th>
+                    <th className="text-left py-1.5 pr-8 w-full sm:w-auto">Quantity Tier</th>
+                    <th className="text-right py-1.5 whitespace-nowrap">Price (PHP)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {catalog.tiers.map((tier) => (
                     <tr key={tier.id} className="border-b border-blue-100 last:border-0">
-                      <td className="py-1 pr-3 text-gray-700">{tier.tier_label}</td>
-                      <td className="py-1 text-right font-medium text-gray-800">
+                      <td className="py-1.5 pr-8 text-gray-700 whitespace-nowrap">{tier.tier_label}</td>
+                      <td className="py-1.5 text-right font-medium text-gray-800 whitespace-nowrap">
                         {Number(tier.price).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
                         })}
