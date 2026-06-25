@@ -16,6 +16,9 @@ import {
   ChevronDown,
   ChevronRight,
   AlertTriangle,
+  Paperclip,
+  Trash2,
+  Upload,
 } from "lucide-react";
 
 import Pagination from "../../components/ui/Pagination";
@@ -382,7 +385,7 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
 };
 
 // View Sale Modal
-const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onUpdateItems, onDelivery, isDeliverying, products, forceConfirmReady }) => {
+const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate, onUpdateItems, onDelivery, onUploadAttachment, onDeleteAttachment, isDeliverying, products, forceConfirmReady }) => {
   const { hasPermission } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -637,6 +640,71 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                     ))}
                   </select>
                 </div>
+
+                {/* Attachments */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-gray-600 flex items-center gap-1">
+                      <Paperclip size={12} />
+                      Attachments
+                      {sale.attachments?.length > 0 && (
+                        <span className="text-gray-400">({sale.attachments.length})</span>
+                      )}
+                    </label>
+                    <label className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 transition-colors">
+                      <Upload size={11} />
+                      Add Files
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          e.target.value = "";
+                          if (files.length) onUploadAttachment(sale.id, files);
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {sale.attachments?.length > 0 ? (
+                    <div className="space-y-1">
+                      {sale.attachments.map((att) => (
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded px-2.5 py-1.5"
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Paperclip size={11} className="text-gray-400 shrink-0" />
+                            <a
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-700 hover:underline truncate"
+                            >
+                              {att.original_name}
+                            </a>
+                            <span className="text-xs text-gray-400 shrink-0">
+                              {att.file_size < 1024 * 1024
+                                ? `${(att.file_size / 1024).toFixed(0)} KB`
+                                : `${(att.file_size / (1024 * 1024)).toFixed(1)} MB`}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteAttachment(sale.id, att.id)}
+                            className="p-0.5 text-red-400 hover:text-red-600 shrink-0"
+                            title="Remove"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">No attachments yet.</p>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
@@ -692,6 +760,42 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               <div className="col-span-2">
                 <p className="text-gray-500">Notes</p>
                 <p className="font-medium">{sale.notes}</p>
+              </div>
+            )}
+            {sale.attachments?.length > 0 && (
+              <div className="col-span-2">
+                <p className="text-gray-500 mb-1.5 flex items-center gap-1">
+                  <Paperclip size={13} />
+                  Attachments
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {sale.attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-md bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700"
+                    >
+                      <Paperclip size={11} className="shrink-0" />
+                      <a
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {att.original_name}
+                      </a>
+                      {hasPermission("edit_sales") && sale.status !== "cancelled" && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteAttachment(sale.id, att.id)}
+                          className="ml-1 p-0.5 text-blue-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1460,6 +1564,37 @@ export default function SalesPage() {
       toast.error(err.response?.data?.message || "Failed to record delivery"),
   });
 
+  const uploadAttachmentMutation = useMutation({
+    mutationFn: async ({ saleId, files }) => {
+      let lastResponse;
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        lastResponse = await api.post(`/sales/${saleId}/attachments`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      return lastResponse;
+    },
+    onSuccess: (_, { saleId }) => {
+      toast.success("Attachment(s) uploaded!");
+      refreshSale(saleId);
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to upload attachment"),
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: ({ saleId, attachmentId }) =>
+      api.delete(`/sales/${saleId}/attachments/${attachmentId}`),
+    onSuccess: (_, { saleId }) => {
+      toast.success("Attachment deleted");
+      refreshSale(saleId);
+    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || "Failed to delete attachment"),
+  });
+
   // Fetch full sale details when viewing
   const handleView = async (sale) => {
     try {
@@ -1811,6 +1946,8 @@ export default function SalesPage() {
           onUpdate={(id, data) => updateMutation.mutate({ id, data })}
           onUpdateItems={(id, items, cb) => updateItemsMutation.mutate({ id, items }, { onSuccess: cb })}
           onDelivery={(saleId, data, cb) => deliveryMutation.mutate({ saleId, data }, { onSuccess: cb })}
+          onUploadAttachment={(saleId, files) => uploadAttachmentMutation.mutate({ saleId, files })}
+          onDeleteAttachment={(saleId, attachmentId) => deleteAttachmentMutation.mutate({ saleId, attachmentId })}
           isDeliverying={deliveryMutation.isPending}
           products={productsForSale}
         />
