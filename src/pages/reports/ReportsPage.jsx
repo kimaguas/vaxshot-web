@@ -15,11 +15,11 @@ import Pagination from "../../components/ui/Pagination";
 
 const tabs = [
   { id: "sales", label: "Sales Report", icon: ShoppingCart },
+  { id: "payments", label: "Payments Report", icon: CreditCard },
   { id: "inventory", label: "Inventory Report", icon: Package },
   { id: "purchase-orders", label: "Purchase Orders", icon: FileText },
   { id: "customers", label: "Customer Report", icon: Users },
   { id: "expiry", label: "Expiry Report", icon: Clock },
-  { id: "payments", label: "Payments Report", icon: CreditCard },
 ];
 
 // Date Filter Component
