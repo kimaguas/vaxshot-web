@@ -1271,7 +1271,10 @@ const PaymentsReportTab = () => {
                         Sale Date
                       </th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                        {paymentView === "paid" ? "Days Since Sale" : "Days Overdue"}
+                        Delivery Date
+                      </th>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                        {paymentView === "paid" ? "Days Since Delivery" : "Days Overdue"}
                       </th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
                         Total
@@ -1301,6 +1304,9 @@ const PaymentsReportTab = () => {
                         </td>
                         <td className="px-4 py-3 text-gray-600">
                           {sale.sale_date}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {sale.delivery_date || <span className="text-gray-400">—</span>}
                         </td>
                         <td className="px-4 py-3">
                           <span
