@@ -300,6 +300,7 @@ export default function CustomersPage() {
   const queryClient = useQueryClient();
   const { user, hasPermission } = useAuth();
   const [search, setSearch] = useState("");
+  const [areaCodeFilter, setAreaCodeFilter]   = useState("");
   const [showModal, setShowModal]             = useState(false);
   const [selected, setSelected]               = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -307,10 +308,10 @@ export default function CustomersPage() {
   const [formErrors, setFormErrors] = useState({});
 
   const { data, isLoading } = useQuery({
-    queryKey: ["customers", search, page],
+    queryKey: ["customers", search, areaCodeFilter, page],
     queryFn: async () => {
       const response = await api.get("/customers", {
-        params: { search, page },
+        params: { search, page, ...(areaCodeFilter ? { area_code_id: areaCodeFilter } : {}) },
       });
       return response.data;
     },
@@ -384,18 +385,34 @@ export default function CustomersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-          />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Search customers..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+            />
+          </div>
+          {user?.role !== "sales_rep" && (
+            <select
+              value={areaCodeFilter}
+              onChange={(e) => { setAreaCodeFilter(e.target.value); setPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All Area Codes</option>
+              {areaCodes.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.code} — {a.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         {hasPermission("create_customers") && (
           <button
