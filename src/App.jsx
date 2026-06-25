@@ -120,7 +120,14 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="suppliers" element={<SuppliersPage />} />
+        <Route
+          path="suppliers"
+          element={
+            <PermissionRoute permission="view_suppliers">
+              <SuppliersPage />
+            </PermissionRoute>
+          }
+        />
         <Route
           path="products"
           element={
@@ -129,8 +136,22 @@ export default function App() {
             </PermissionRoute>
           }
         />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+        <Route
+          path="customers"
+          element={
+            <PermissionRoute permission="view_customers">
+              <CustomersPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="purchase-orders"
+          element={
+            <PermissionRoute permission="view_purchase_orders">
+              <PurchaseOrdersPage />
+            </PermissionRoute>
+          }
+        />
         <Route
           path="inventory"
           element={
@@ -139,7 +160,14 @@ export default function App() {
             </PermissionRoute>
           }
         />
-        <Route path="sales" element={<SalesPage />} />
+        <Route
+          path="sales"
+          element={
+            <PermissionRoute permission="view_sales">
+              <SalesPage />
+            </PermissionRoute>
+          }
+        />
         <Route
           path="quotations"
           element={
@@ -156,7 +184,14 @@ export default function App() {
             </PermissionRoute>
           }
         />
-        <Route path="reports" element={<ReportsPage />} />
+        <Route
+          path="reports"
+          element={
+            <PermissionRoute permission="view_reports">
+              <ReportsPage />
+            </PermissionRoute>
+          }
+        />
         <Route
           path="area-codes"
           element={
