@@ -37,6 +37,12 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
+  const fmtPrice = (v) => {
+    const n = parseFloat(String(v ?? "").replace(/,/g, ""));
+    return isNaN(n) ? "" : n.toLocaleString("en-PH", { maximumFractionDigits: 2 });
+  };
+  const stripCommas = (v) => v.replace(/[^0-9.]/g, "");
+
   const setTier = (index, key, value) =>
     setForm((f) => {
       const tiers = [...f.tiers];
@@ -241,12 +247,11 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
                       {tier.max_qty ? `${tier.min_qty || 1}-${tier.max_qty}vls` : `${tier.min_qty || 1}vls & up`}
                     </span>
                     <input
-                      type="number"
-                      value={tier.price}
-                      onChange={(e) => setTier(i, "price", e.target.value)}
+                      type="text"
+                      inputMode="decimal"
+                      value={fmtPrice(tier.price)}
+                      onChange={(e) => setTier(i, "price", stripCommas(e.target.value))}
                       required
-                      min="0"
-                      step="0.01"
                       placeholder="0.00"
                       className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
                     />
@@ -566,19 +571,19 @@ const ProductRow = ({ catalog, canManage, onEdit, onDelete, deleteConfirmId, set
 
       {expanded && catalog.tiers?.length > 0 && (
         <tr className="bg-blue-50">
-          <td colSpan={7} className="px-8 py-3">
+          <td colSpan={7} className="px-4 py-3">
             <div className="overflow-x-auto">
-              <table className="w-full max-w-sm text-sm">
+              <table className="w-auto text-sm">
                 <thead>
                   <tr className="text-xs text-gray-500 border-b border-blue-200">
-                    <th className="text-left py-1 pr-6">Quantity Tier</th>
+                    <th className="text-left py-1 pr-3">Quantity Tier</th>
                     <th className="text-right py-1">Price (PHP)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {catalog.tiers.map((tier) => (
                     <tr key={tier.id} className="border-b border-blue-100 last:border-0">
-                      <td className="py-1 pr-6 text-gray-700">{tier.tier_label}</td>
+                      <td className="py-1 pr-3 text-gray-700">{tier.tier_label}</td>
                       <td className="py-1 text-right font-medium text-gray-800">
                         {Number(tier.price).toLocaleString("en-PH", {
                           minimumFractionDigits: 2,
