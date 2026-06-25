@@ -38,8 +38,14 @@ const PricingModal = ({ catalog, suppliers, onClose, onSave, saving }) => {
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   const fmtPrice = (v) => {
-    const n = parseFloat(String(v ?? "").replace(/,/g, ""));
-    return isNaN(n) ? "" : n.toLocaleString("en-PH", { maximumFractionDigits: 2 });
+    const str = String(v ?? "");
+    if (!str) return "";
+    const hasDot = str.includes(".");
+    const [intStr, decStr = ""] = str.split(".");
+    const intNum = parseInt(intStr || "0", 10);
+    if (isNaN(intNum)) return str;
+    const formatted = intNum.toLocaleString("en-PH");
+    return hasDot ? `${formatted}.${decStr}` : formatted;
   };
   const stripCommas = (v) => v.replace(/[^0-9.]/g, "");
 
