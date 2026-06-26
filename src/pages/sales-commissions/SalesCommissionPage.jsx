@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-import { DollarSign, ChevronDown, ChevronUp, X } from "lucide-react";
+import { DollarSign, ChevronDown, ChevronUp, X, Printer } from "lucide-react";
 
 const fmt = (v) =>
   Number(v ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 });
@@ -22,15 +22,209 @@ const BADGE = {
   draft:     "bg-gray-100 text-gray-700",
 };
 
+function printCommission(sale, editedCosts = {}) {
+  let totalCommission = 0;
+  const itemRows = sale.items.map((item, i) => {
+    const acqCost  = Number(editedCosts[`${sale.id}_${i}`] ?? item.acquisition_cost);
+    const unitComm = (item.unit_price - acqCost) * 0.5;
+    const totalComm = unitComm * item.quantity;
+    totalCommission += totalComm;
+    return `
+      <tr>
+        <td>${item.product_name}</td>
+        <td class="right">₱${fmt(item.unit_price)}</td>
+        <td class="right">₱${fmt(acqCost)}</td>
+        <td class="center">${item.quantity}</td>
+        <td class="right">₱${fmt(item.unit_price * item.quantity)}</td>
+        <td class="center">₱${fmt(unitComm)}</td>
+        <td class="center">₱${fmt(totalComm)}</td>
+      </tr>`;
+  }).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sales Commission — ${sale.sale_number}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 28px 36px; }
+
+    .doc-header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+    .doc-header img { height: 60px; }
+    .doc-header-text h1 { font-size: 15px; font-weight: bold; letter-spacing: 1px; }
+    .doc-header-text p  { font-size: 10px; color: #555; margin-top: 2px; }
+
+    .section-title { font-size: 11px; font-weight: bold; letter-spacing: 0.5px; margin: 18px 0 6px; text-transform: uppercase; }
+
+    /* Order Details */
+    .details-table { width: 100%; border-collapse: collapse; }
+    .details-table td { border: 1px solid #999; padding: 4px 8px; }
+    .details-table td.label { font-weight: bold; width: 30%; background: #f5f5f5; }
+
+    /* Order Form */
+    .order-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    .order-table th { border: 1px solid #000; padding: 5px 8px; background: #e8e8e8; font-size: 10px; font-weight: bold; text-align: center; }
+    .order-table td { border: 1px solid #999; padding: 4px 8px; font-size: 10px; }
+    .order-table td.center { text-align: center; }
+    .order-table td.right  { text-align: right; }
+    .order-table tr.total-row td { font-weight: bold; background: #f5f5f5; }
+    .order-table td:first-child { text-align: left; }
+    /* Blank filler rows */
+    .order-table tr.blank td { height: 20px; }
+
+    /* Collection section */
+    .collection-box { border: 1px solid #999; padding: 12px 16px; margin-top: 6px; }
+    .collection-row { display: flex; gap: 40px; margin-top: 10px; }
+    .collection-field { flex: 1; }
+    .collection-field .field-label { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #555; }
+    .collection-field .field-value { border-bottom: 1px solid #000; padding: 2px 0; margin-top: 2px; min-height: 18px; font-size: 11px; }
+
+    .total-collected { font-size: 12px; font-weight: bold; }
+    .total-collected span { font-size: 14px; }
+
+    .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 10px; color: #777; border-top: 1px solid #ddd; padding-top: 8px; }
+
+    @media print {
+      body { padding: 16px 24px; }
+      @page { margin: 10mm; size: A4 portrait; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="doc-header">
+    <img src="${window.location.origin}/logo.png" onerror="this.style.display='none'">
+    <div class="doc-header-text">
+      <h1>VAXSHOT CORPORATION</h1>
+      <p>Sales Commission Receipt</p>
+    </div>
+    <div style="margin-left:auto;text-align:right;font-size:10px;color:#555;">
+      <div><b>${sale.sale_number}</b></div>
+      <div>Printed: ${new Date().toLocaleDateString("en-PH", { year:"numeric", month:"long", day:"numeric" })}</div>
+    </div>
+  </div>
+
+  <!-- ORDER DETAILS -->
+  <div class="section-title">Order Details</div>
+  <table class="details-table">
+    <tr>
+      <td class="label">SALE DATE</td>
+      <td>${sale.sale_date ?? ""}</td>
+      <td class="label">INVOICE #</td>
+      <td>${sale.invoice_number ?? ""}</td>
+    </tr>
+    <tr>
+      <td class="label">COMPANY / LGU</td>
+      <td>${sale.customer ?? ""}</td>
+      <td class="label">OR #</td>
+      <td>${sale.or_number ?? ""}</td>
+    </tr>
+    <tr>
+      <td class="label">ADDRESS</td>
+      <td colspan="3">${sale.customer_address ?? ""}</td>
+    </tr>
+    <tr>
+      <td class="label">MODE OF PAYMENT</td>
+      <td colspan="3">${sale.payment_method ? sale.payment_method.replace(/_/g," ").toUpperCase() : ""}</td>
+    </tr>
+    <tr>
+      <td class="label">DELIVERY DATE</td>
+      <td>${sale.delivery_date ?? ""}</td>
+      <td class="label">PAYMENT DATE</td>
+      <td>${sale.payment_date ?? ""}</td>
+    </tr>
+    <tr>
+      <td class="label">TOTAL AMOUNT</td>
+      <td colspan="3" style="font-weight:bold;">₱${fmt(sale.total_amount)}</td>
+    </tr>
+  </table>
+
+  <!-- ORDER FORM -->
+  <div class="section-title">Order Form</div>
+  <table class="order-table">
+    <thead>
+      <tr>
+        <th style="text-align:left;width:30%">PRODUCT NAME</th>
+        <th>PRICE</th>
+        <th>ACQ. COST</th>
+        <th>QTY</th>
+        <th>TOTAL</th>
+        <th>UNIT COMMISSION</th>
+        <th>TOTAL SALES COMMISSION</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+      <tr class="blank"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr class="total-row">
+        <td colspan="6" style="text-align:right;padding-right:12px;">TOTAL:</td>
+        <td class="center">₱${fmt(totalCommission)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- COLLECTION OF SALES COMMISSION -->
+  <div class="section-title">Collection of Sales Commission</div>
+  <div class="collection-box">
+    <div class="total-collected">
+      TOTAL AMOUNT COLLECTED: <span style="border-bottom:1px solid #000;display:inline-block;min-width:200px;padding:0 4px;">&nbsp;</span>
+    </div>
+    <div class="collection-row">
+      <div class="collection-field">
+        <div class="field-label">Date</div>
+        <div class="field-value">${sale.collected_at ?? ""}</div>
+      </div>
+      <div class="collection-field">
+        <div class="field-label">Collected From</div>
+        <div class="field-value">&nbsp;</div>
+      </div>
+      <div class="collection-field">
+        <div class="field-label">Received By</div>
+        <div class="field-value">${sale.collected_by ?? ""}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>This document is system-generated by Vaxshot Web System</span>
+    <span>${sale.sale_number} · ${sale.invoice_number ?? ""}</span>
+  </div>
+
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=800,height=900");
+  win.document.write(html);
+  win.document.close();
+}
+
 export default function SalesCommissionPage() {
   const { hasPermission } = useAuth();
   const qc = useQueryClient();
 
-  const [activeTab, setActiveTab]     = useState("pending");
-  const [expandedId, setExpandedId]   = useState(null);
+  const [activeTab, setActiveTab]         = useState("pending");
+  const [expandedId, setExpandedId]       = useState(null);
+  const [editedCosts, setEditedCosts]     = useState({});
   const [collectSale, setCollectSale]     = useState(null);
   const [notes, setNotes]                 = useState("");
   const [collectedDate, setCollectedDate] = useState("");
+
+  const setAcqCost = (saleId, index, value) =>
+    setEditedCosts((prev) => ({ ...prev, [`${saleId}_${index}`]: value }));
+
+  const getAcqCost = (saleId, index, defaultCost) =>
+    editedCosts[`${saleId}_${index}`] !== undefined
+      ? editedCosts[`${saleId}_${index}`]
+      : String(defaultCost);
+
+  const calcSaleComm = (sale) =>
+    sale.items.reduce((sum, item, i) => {
+      const cost = Number(getAcqCost(sale.id, i, item.acquisition_cost)) || 0;
+      return sum + (item.unit_price - cost) * item.quantity * 0.5;
+    }, 0);
 
   const { data, isLoading } = useQuery({
     queryKey: ["sale-commissions", activeTab],
@@ -41,8 +235,8 @@ export default function SalesCommissionPage() {
   });
 
   const collectMutation = useMutation({
-    mutationFn: ({ saleId, notes, collected_date }) =>
-      api.post(`/sale-commissions/${saleId}/collect`, { notes, collected_date }),
+    mutationFn: ({ saleId, notes, collected_date, commission_amount }) =>
+      api.post(`/sale-commissions/${saleId}/collect`, { notes, collected_date, commission_amount }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sale-commissions"] });
       setCollectSale(null);
@@ -50,8 +244,8 @@ export default function SalesCommissionPage() {
     },
   });
 
-  const summary  = data?.summary  ?? {};
-  const sales    = data?.sales    ?? [];
+  const summary = data?.summary ?? {};
+  const sales   = data?.sales   ?? [];
 
   const tabColor = (tab) => {
     const active = activeTab === tab.key;
@@ -59,6 +253,9 @@ export default function SalesCommissionPage() {
     const c = { yellow: "border-yellow-500 text-yellow-600", blue: "border-blue-500 text-blue-600", green: "border-green-500 text-green-600" };
     return c[tab.color] ?? "border-blue-500 text-blue-600";
   };
+
+  // Always 9 columns: toggle + sale# + customer + sale date + delivery date + payment + total + commission + action
+  const colSpan = activeTab === "collected" ? 10 : 9;
 
   return (
     <div className="space-y-6">
@@ -70,24 +267,9 @@ export default function SalesCommissionPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard
-          label="Pending"
-          amount={summary.pending_total ?? 0}
-          count={summary.pending_count ?? 0}
-          color="yellow"
-        />
-        <SummaryCard
-          label="For Release"
-          amount={summary.for_release_total ?? 0}
-          count={summary.for_release_count ?? 0}
-          color="blue"
-        />
-        <SummaryCard
-          label="Collected"
-          amount={summary.collected_total ?? 0}
-          count={summary.collected_count ?? 0}
-          color="green"
-        />
+        <SummaryCard label="Pending"     amount={summary.pending_total ?? 0}     count={summary.pending_count ?? 0}     color="yellow" />
+        <SummaryCard label="For Release" amount={summary.for_release_total ?? 0} count={summary.for_release_count ?? 0} color="blue" />
+        <SummaryCard label="Collected"   amount={summary.collected_total ?? 0}   count={summary.collected_count ?? 0}   color="green" />
       </div>
 
       {/* Tabs */}
@@ -111,7 +293,6 @@ export default function SalesCommissionPage() {
           </nav>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center py-16">
@@ -135,11 +316,9 @@ export default function SalesCommissionPage() {
                   <th className="px-4 py-3 text-right">Total Amount</th>
                   <th className="px-4 py-3 text-right">Commission</th>
                   {activeTab === "collected" && (
-                    <th className="px-4 py-3 text-left">Collected</th>
+                    <th className="px-4 py-3 text-left">Collected On</th>
                   )}
-                  {activeTab === "for_release" && hasPermission("collect_commission") && (
-                    <th className="px-4 py-3 text-center">Action</th>
-                  )}
+                  <th className="px-4 py-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -148,7 +327,21 @@ export default function SalesCommissionPage() {
                     <tr
                       key={sale.id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setExpandedId(expandedId === sale.id ? null : sale.id)}
+                      onClick={() => {
+                        const next = expandedId === sale.id ? null : sale.id;
+                        setExpandedId(next);
+                        if (next) {
+                          const init = {};
+                          sale.items.forEach((item, i) => {
+                            const key = `${sale.id}_${i}`;
+                            if (editedCosts[key] === undefined) {
+                              const saved = sale.cost_overrides?.[String(i)];
+                              init[key] = String(saved !== undefined ? saved : item.acquisition_cost);
+                            }
+                          });
+                          if (Object.keys(init).length) setEditedCosts((p) => ({ ...p, ...init }));
+                        }
+                      }}
                     >
                       <td className="px-4 py-3 text-gray-400">
                         {expandedId === sale.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -175,26 +368,35 @@ export default function SalesCommissionPage() {
                           {sale.collected_by && <div className="text-gray-400">by {sale.collected_by}</div>}
                         </td>
                       )}
-                      {activeTab === "for_release" && hasPermission("collect_commission") && (
-                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-2">
+                          {activeTab === "for_release" && hasPermission("collect_commission") && (
+                            <button
+                              onClick={() => {
+                                setCollectSale(sale);
+                                setNotes("");
+                                setCollectedDate(new Date().toISOString().split("T")[0]);
+                              }}
+                              className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                              Collect
+                            </button>
+                          )}
                           <button
-                            onClick={() => {
-                              setCollectSale(sale);
-                              setNotes("");
-                              setCollectedDate(new Date().toISOString().split("T")[0]);
-                            }}
-                            className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                            onClick={() => printCommission(sale, editedCosts)}
+                            title="Print PDF"
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           >
-                            Collect
+                            <Printer size={15} />
                           </button>
-                        </td>
-                      )}
+                        </div>
+                      </td>
                     </tr>
 
                     {/* Expanded items breakdown */}
                     {expandedId === sale.id && (
                       <tr key={`${sale.id}-items`}>
-                        <td colSpan={activeTab === "collected" ? 9 : activeTab === "for_release" && hasPermission("collect_commission") ? 9 : 8} className="px-8 pb-4 bg-blue-50">
+                        <td colSpan={colSpan} className="px-8 pb-4 bg-blue-50">
                           <div className="mt-2">
                             <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Commission Breakdown</p>
                             <table className="w-full text-xs">
@@ -209,21 +411,59 @@ export default function SalesCommissionPage() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-blue-100">
-                                {sale.items.map((item, i) => (
-                                  <tr key={i}>
-                                    <td className="py-1.5 text-gray-700">{item.product_name}</td>
-                                    <td className="py-1.5 text-right text-gray-600">{item.quantity}</td>
-                                    <td className="py-1.5 text-right text-gray-600">₱{fmt(item.unit_price)}</td>
-                                    <td className="py-1.5 text-right text-gray-600">₱{fmt(item.acquisition_cost)}</td>
-                                    <td className="py-1.5 text-right text-gray-600">₱{fmt((item.unit_price - item.acquisition_cost) * 0.5)}</td>
-                                    <td className="py-1.5 text-right font-semibold text-blue-700">₱{fmt(item.commission)}</td>
-                                  </tr>
-                                ))}
+                                {sale.items.map((item, i) => {
+                                  const acqCost   = Number(getAcqCost(sale.id, i, item.acquisition_cost)) || 0;
+                                  const unitComm  = (item.unit_price - acqCost) * 0.5;
+                                  const commAmt   = unitComm * item.quantity;
+                                  return (
+                                    <tr key={i}>
+                                      <td className="py-1.5 text-gray-700">{item.product_name}</td>
+                                      <td className="py-1.5 text-right text-gray-600">{item.quantity}</td>
+                                      <td className="py-1.5 text-right text-gray-600">₱{fmt(item.unit_price)}</td>
+                                      <td className="py-1.5 text-right text-gray-600">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={getAcqCost(sale.id, i, item.acquisition_cost)}
+                                          onChange={(e) => setAcqCost(sale.id, i, e.target.value)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          onBlur={(e) => {
+                                            e.stopPropagation();
+                                            const overrides = {};
+                                            sale.items.forEach((_, idx) => {
+                                              overrides[String(idx)] = Number(getAcqCost(sale.id, idx, sale.items[idx].acquisition_cost)) || 0;
+                                            });
+                                            const newAmount = calcSaleComm(sale);
+                                            api.patch(`/sale-commissions/${sale.id}/amount`, {
+                                              commission_amount: newAmount,
+                                              cost_overrides: overrides,
+                                            }).then(() => {
+                                              qc.setQueryData(['sale-commissions', activeTab], (old) =>
+                                                old ? {
+                                                  ...old,
+                                                  sales: old.sales.map((s) =>
+                                                    s.id === sale.id
+                                                      ? { ...s, commission_amount: newAmount, cost_overrides: overrides }
+                                                      : s
+                                                  ),
+                                                } : old
+                                              );
+                                            });
+                                          }}
+                                          className="w-24 text-right border border-blue-300 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+                                        />
+                                      </td>
+                                      <td className="py-1.5 text-right text-gray-600">₱{fmt(unitComm)}</td>
+                                      <td className="py-1.5 text-right font-semibold text-blue-700">₱{fmt(commAmt)}</td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                               <tfoot>
                                 <tr className="border-t border-blue-200 font-semibold">
-                                  <td colSpan={4} className="py-1.5 text-gray-700">Total Commission</td>
-                                  <td className="py-1.5 text-right text-blue-700">₱{fmt(sale.commission_amount)}</td>
+                                  <td colSpan={5} className="py-1.5 text-gray-700">Total Commission</td>
+                                  <td className="py-1.5 text-right text-blue-700">₱{fmt(calcSaleComm(sale))}</td>
                                 </tr>
                               </tfoot>
                             </table>
@@ -261,7 +501,7 @@ export default function SalesCommissionPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Commission Amount</span>
-                  <span className="font-bold text-blue-700 text-base">₱{fmt(collectSale.commission_amount)}</span>
+                  <span className="font-bold text-blue-700 text-base">₱{fmt(calcSaleComm(collectSale))}</span>
                 </div>
               </div>
               <div>
@@ -292,7 +532,7 @@ export default function SalesCommissionPage() {
                 Cancel
               </button>
               <button
-                onClick={() => collectMutation.mutate({ saleId: collectSale.id, notes, collected_date: collectedDate })}
+                onClick={() => collectMutation.mutate({ saleId: collectSale.id, notes, collected_date: collectedDate, commission_amount: calcSaleComm(collectSale) })}
                 disabled={collectMutation.isPending}
                 className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
