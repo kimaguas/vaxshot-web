@@ -1273,9 +1273,11 @@ const PaymentsReportTab = () => {
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
                         Delivery Date
                       </th>
-                      <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                        {paymentView === "paid" ? "Days Since Delivery" : "Days Overdue"}
-                      </th>
+                      {paymentView !== "paid" && (
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600">
+                          Days Overdue
+                        </th>
+                      )}
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
                         Total
                       </th>
@@ -1308,21 +1310,23 @@ const PaymentsReportTab = () => {
                         <td className="px-4 py-3 text-gray-600">
                           {sale.delivery_date || <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`font-bold ${
-                              sale.days_overdue > 60
-                                ? "text-red-600"
-                                : sale.days_overdue > 30
-                                  ? "text-orange-600"
-                                  : sale.days_overdue > 15
-                                    ? "text-yellow-600"
-                                    : "text-gray-600"
-                            }`}
-                          >
-                            {sale.days_overdue}d
-                          </span>
-                        </td>
+                        {paymentView !== "paid" && (
+                          <td className="px-4 py-3">
+                            <span
+                              className={`font-bold ${
+                                sale.days_overdue > 60
+                                  ? "text-red-600"
+                                  : sale.days_overdue > 30
+                                    ? "text-orange-600"
+                                    : sale.days_overdue > 15
+                                      ? "text-yellow-600"
+                                      : "text-gray-600"
+                              }`}
+                            >
+                              {sale.days_overdue}d
+                            </span>
+                          </td>
+                        )}
                         <td className="px-4 py-3 font-medium">
                           ₱{Number(sale.total_amount).toLocaleString()}
                         </td>
@@ -1335,9 +1339,11 @@ const PaymentsReportTab = () => {
                         <td className="px-4 py-3">
                           <span
                             className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              sale.payment_status === "partial"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
+                              sale.payment_status === "paid"
+                                ? "bg-green-100 text-green-700"
+                                : sale.payment_status === "partial"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
                             }`}
                           >
                             {sale.payment_status}

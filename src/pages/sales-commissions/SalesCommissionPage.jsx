@@ -202,15 +202,26 @@ function printCommission(sale, editedCosts = {}) {
 }
 
 export default function SalesCommissionPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, isSalesRep } = useAuth();
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab]         = useState("pending");
+  const [areaCodeFilter, setAreaCodeFilter] = useState("");
   const [expandedId, setExpandedId]       = useState(null);
   const [editedCosts, setEditedCosts]     = useState({});
   const [collectSale, setCollectSale]     = useState(null);
   const [notes, setNotes]                 = useState("");
   const [collectedDate, setCollectedDate] = useState("");
+
+  const { data: areaCodesData } = useQuery({
+    queryKey: ["area-codes-list"],
+    queryFn: async () => {
+      const res = await api.get("/area-codes", { params: { list: 1 } });
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !isSalesRep(),
+  });
 
   const setAcqCost = (saleId, index, value) =>
     setEditedCosts((prev) => ({ ...prev, [`${saleId}_${index}`]: value }));
@@ -227,9 +238,11 @@ export default function SalesCommissionPage() {
     }, 0);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["sale-commissions", activeTab],
+    queryKey: ["sale-commissions", activeTab, areaCodeFilter],
     queryFn: async () => {
-      const res = await api.get("/sale-commissions", { params: { status: activeTab } });
+      const params = { status: activeTab };
+      if (areaCodeFilter) params.area_code_id = areaCodeFilter;
+      const res = await api.get("/sale-commissions", { params });
       return res.data;
     },
   });
@@ -241,6 +254,7 @@ export default function SalesCommissionPage() {
       qc.invalidateQueries({ queryKey: ["sale-commissions"] });
       setCollectSale(null);
       setNotes("");
+      setCollectedDate("");
     },
   });
 
@@ -271,6 +285,23 @@ export default function SalesCommissionPage() {
         <SummaryCard label="For Release" amount={summary.for_release_total ?? 0} count={summary.for_release_count ?? 0} color="blue" />
         <SummaryCard label="Collected"   amount={summary.collected_total ?? 0}   count={summary.collected_count ?? 0}   color="green" />
       </div>
+
+      {/* Area Code Filter — hidden for sales reps (they're auto-scoped) */}
+      {!isSalesRep() && (
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Filter by Area Code:</label>
+          <select
+            value={areaCodeFilter}
+            onChange={(e) => { setAreaCodeFilter(e.target.value); setExpandedId(null); }}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+          >
+            <option value="">All Areas</option>
+            {(areaCodesData?.area_codes ?? areaCodesData ?? []).map((ac) => (
+              <option key={ac.id} value={ac.id}>{ac.code} — {ac.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
