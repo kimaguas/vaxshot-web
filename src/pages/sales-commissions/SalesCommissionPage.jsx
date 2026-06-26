@@ -28,8 +28,9 @@ export default function SalesCommissionPage() {
 
   const [activeTab, setActiveTab]     = useState("pending");
   const [expandedId, setExpandedId]   = useState(null);
-  const [collectSale, setCollectSale] = useState(null);
-  const [notes, setNotes]             = useState("");
+  const [collectSale, setCollectSale]     = useState(null);
+  const [notes, setNotes]                 = useState("");
+  const [collectedDate, setCollectedDate] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["sale-commissions", activeTab],
@@ -40,8 +41,8 @@ export default function SalesCommissionPage() {
   });
 
   const collectMutation = useMutation({
-    mutationFn: ({ saleId, notes }) =>
-      api.post(`/sale-commissions/${saleId}/collect`, { notes }),
+    mutationFn: ({ saleId, notes, collected_date }) =>
+      api.post(`/sale-commissions/${saleId}/collect`, { notes, collected_date }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sale-commissions"] });
       setCollectSale(null);
@@ -177,7 +178,11 @@ export default function SalesCommissionPage() {
                       {activeTab === "for_release" && hasPermission("collect_commission") && (
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => { setCollectSale(sale); setNotes(""); }}
+                            onClick={() => {
+                              setCollectSale(sale);
+                              setNotes("");
+                              setCollectedDate(new Date().toISOString().split("T")[0]);
+                            }}
                             className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
                           >
                             Collect
@@ -199,7 +204,8 @@ export default function SalesCommissionPage() {
                                   <th className="text-right py-1 font-medium">Qty</th>
                                   <th className="text-right py-1 font-medium">Sale Price</th>
                                   <th className="text-right py-1 font-medium">Acq. Cost</th>
-                                  <th className="text-right py-1 font-medium">Commission</th>
+                                  <th className="text-right py-1 font-medium">Unit Comm.</th>
+                                  <th className="text-right py-1 font-medium">Comm. Amount</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-blue-100">
@@ -209,6 +215,7 @@ export default function SalesCommissionPage() {
                                     <td className="py-1.5 text-right text-gray-600">{item.quantity}</td>
                                     <td className="py-1.5 text-right text-gray-600">₱{fmt(item.unit_price)}</td>
                                     <td className="py-1.5 text-right text-gray-600">₱{fmt(item.acquisition_cost)}</td>
+                                    <td className="py-1.5 text-right text-gray-600">₱{fmt((item.unit_price - item.acquisition_cost) * 0.5)}</td>
                                     <td className="py-1.5 text-right font-semibold text-blue-700">₱{fmt(item.commission)}</td>
                                   </tr>
                                 ))}
@@ -258,6 +265,15 @@ export default function SalesCommissionPage() {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Collection Date</label>
+                <input
+                  type="date"
+                  value={collectedDate}
+                  onChange={(e) => setCollectedDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
                 <textarea
                   value={notes}
@@ -276,7 +292,7 @@ export default function SalesCommissionPage() {
                 Cancel
               </button>
               <button
-                onClick={() => collectMutation.mutate({ saleId: collectSale.id, notes })}
+                onClick={() => collectMutation.mutate({ saleId: collectSale.id, notes, collected_date: collectedDate })}
                 disabled={collectMutation.isPending}
                 className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
