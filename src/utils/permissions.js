@@ -86,6 +86,13 @@ export const PERMISSION_MODULES = [
     permissions: [{ name: "view_reports", label: "View Reports" }],
   },
   {
+    module: "Sales Commissions",
+    permissions: [
+      { name: "view_sales_commissions", label: "View Sales Commissions" },
+      { name: "collect_commission",     label: "Collect Commission" },
+    ],
+  },
+  {
     module: "Area Codes",
     permissions: [
       { name: "view_area_codes",   label: "View Area Codes" },
@@ -129,6 +136,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_area_codes", "create_area_codes", "edit_area_codes", "delete_area_codes",
     "view_users", "create_users", "edit_users", "delete_users",
     "view_activity_logs",
+    "view_sales_commissions", "collect_commission",
     "manage_settings",
   ],
   manager: [
@@ -144,6 +152,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_email_templates", "create_email_templates", "edit_email_templates", "delete_email_templates",
     "view_reports",
     "view_area_codes", "create_area_codes", "edit_area_codes", "delete_area_codes",
+    "view_sales_commissions", "collect_commission",
   ],
   staff: [
     "view_dashboard",
@@ -168,5 +177,6 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_quotations", "create_quotations", "edit_quotations", "send_quotations",
     "view_reports",
     "view_area_codes",
+    "view_sales_commissions", "collect_commission",
   ],
 };

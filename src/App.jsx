@@ -39,6 +39,7 @@ import AreaCodesPage from "./pages/area-codes/AreaCodesPage";
 import ProductsPage from "./pages/products/ProductsPage";
 import InventoryPage from "./pages/inventory/InventoryPage";
 import SettingsPage from "./pages/settings/SettingsPage";
+import SalesCommissionPage from "./pages/sales-commissions/SalesCommissionPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -213,6 +214,14 @@ export default function App() {
           element={
             <PermissionRoute permission="view_activity_logs">
               <ActivityLogsPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="sales-commissions"
+          element={
+            <PermissionRoute permission="view_sales_commissions">
+              <SalesCommissionPage />
             </PermissionRoute>
           }
         />

@@ -16,6 +16,7 @@ import {
   X,
   Package,
   Settings,
+  DollarSign,
 } from "lucide-react";
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { label: "Quotations",       path: "/quotations",       icon: FileText,     permission: "view_quotations" },
   { label: "Email Templates",  path: "/email-templates",  icon: Mail,         permission: "view_email_templates" },
   { label: "Reports",          path: "/reports",          icon: BarChart3,    permission: "view_reports" },
+  { label: "Sales Commission", path: "/sales-commissions", icon: DollarSign,  permission: "view_sales_commissions" },
   { label: "Area Codes",      path: "/area-codes",      icon: MapPin,          permission: "view_area_codes" },
   { label: "Users",           path: "/users",           icon: UserCog,         permission: "view_users" },
   { label: "Activity Logs",   path: "/activity-logs",   icon: ClipboardList,   permission: "view_activity_logs" },
