@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-import { DollarSign, ChevronDown, ChevronUp, X, Printer } from "lucide-react";
+import { DollarSign, ChevronDown, ChevronUp, X, Printer, FileText } from "lucide-react";
 
 const fmt = (v) =>
   Number(v ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 });
@@ -22,7 +22,7 @@ const BADGE = {
   draft:     "bg-gray-100 text-gray-700",
 };
 
-function printCommission(sale, editedCosts = {}) {
+function printCommission(sale, editedCosts = {}, blank = false) {
   const pct = (sale.commission_percentage ?? 50) / 100;
   let totalCommission = 0;
   const itemRows = sale.items.map((item, i) => {
@@ -34,11 +34,11 @@ function printCommission(sale, editedCosts = {}) {
       <tr>
         <td>${item.product_name}</td>
         <td class="right">₱${fmt(item.unit_price)}</td>
-        <td class="right">₱${fmt(acqCost)}</td>
+        <td class="center">${blank ? "&nbsp;" : `₱${fmt(acqCost)}`}</td>
         <td class="center">${item.quantity}</td>
         <td class="right">₱${fmt(item.unit_price * item.quantity)}</td>
-        <td class="center">₱${fmt(unitComm)}</td>
-        <td class="center">₱${fmt(totalComm)}</td>
+        <td class="center">${blank ? "&nbsp;" : `₱${fmt(unitComm)}`}</td>
+        <td class="center">${blank ? "&nbsp;" : `₱${fmt(totalComm)}`}</td>
       </tr>`;
   }).join("");
 
@@ -161,7 +161,7 @@ function printCommission(sale, editedCosts = {}) {
       <tr class="blank"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
       <tr class="total-row">
         <td colspan="6" style="text-align:right;padding-right:12px;">TOTAL:</td>
-        <td class="center">₱${fmt(totalCommission)}</td>
+        <td class="center">${blank ? "&nbsp;" : `₱${fmt(totalCommission)}`}</td>
       </tr>
     </tbody>
   </table>
@@ -413,6 +413,15 @@ export default function SalesCommissionPage() {
                               className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
                             >
                               Collect
+                            </button>
+                          )}
+                          {activeTab === "for_release" && (
+                            <button
+                              onClick={() => printCommission(sale, editedCosts, true)}
+                              title="Print Blank (fill manually)"
+                              className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            >
+                              <FileText size={15} />
                             </button>
                           )}
                           <button
