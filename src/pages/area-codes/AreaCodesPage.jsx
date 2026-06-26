@@ -8,9 +8,10 @@ import Pagination from "../../components/ui/Pagination";
 
 const AreaCodeModal = ({ areaCode, onClose, onSave }) => {
   const [form, setForm] = useState({
-    code:        areaCode?.code        || "",
-    name:        areaCode?.name        || "",
-    description: areaCode?.description || "",
+    code:                  areaCode?.code                  || "",
+    name:                  areaCode?.name                  || "",
+    description:           areaCode?.description           || "",
+    commission_percentage: areaCode?.commission_percentage ?? 50,
   });
 
   const handleSubmit = (e) => {
@@ -67,6 +68,28 @@ const AreaCodeModal = ({ areaCode, onClose, onSave }) => {
               placeholder="Optional description..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Commission Percentage (%)
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.commission_percentage}
+                onChange={(e) => setForm({ ...form, commission_percentage: e.target.value })}
+                required
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="absolute right-3 top-2.5 text-gray-400 text-sm font-medium">%</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Commission = (Sale Price − Acq. Cost) × {form.commission_percentage || 0}% per unit
+            </p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -185,6 +208,7 @@ export default function AreaCodesPage() {
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Code</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Name</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Description</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Commission %</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Customers</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Created</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Actions</th>
@@ -193,13 +217,13 @@ export default function AreaCodesPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
                 </td>
               </tr>
             ) : areaCodes.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <MapPin size={40} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-gray-400">No area codes found</p>
                 </td>
@@ -223,6 +247,9 @@ export default function AreaCodesPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                     {ac.description || "-"}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-blue-700">
+                    {ac.commission_percentage ?? 50}%
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {ac.customers_count ?? 0}

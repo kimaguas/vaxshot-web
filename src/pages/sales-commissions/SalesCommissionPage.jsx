@@ -23,10 +23,11 @@ const BADGE = {
 };
 
 function printCommission(sale, editedCosts = {}) {
+  const pct = (sale.commission_percentage ?? 50) / 100;
   let totalCommission = 0;
   const itemRows = sale.items.map((item, i) => {
     const acqCost  = Number(editedCosts[`${sale.id}_${i}`] ?? item.acquisition_cost);
-    const unitComm = (item.unit_price - acqCost) * 0.5;
+    const unitComm = (item.unit_price - acqCost) * pct;
     const totalComm = unitComm * item.quantity;
     totalCommission += totalComm;
     return `
@@ -231,11 +232,13 @@ export default function SalesCommissionPage() {
       ? editedCosts[`${saleId}_${index}`]
       : String(defaultCost);
 
-  const calcSaleComm = (sale) =>
-    sale.items.reduce((sum, item, i) => {
+  const calcSaleComm = (sale) => {
+    const pct = (sale.commission_percentage ?? 50) / 100;
+    return sale.items.reduce((sum, item, i) => {
       const cost = Number(getAcqCost(sale.id, i, item.acquisition_cost)) || 0;
-      return sum + (item.unit_price - cost) * item.quantity * 0.5;
+      return sum + (item.unit_price - cost) * item.quantity * pct;
     }, 0);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["sale-commissions", activeTab, areaCodeFilter],
@@ -276,7 +279,6 @@ export default function SalesCommissionPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Sales Commission</h1>
-        <p className="text-sm text-gray-500 mt-1">Commission = (Sale Price − Acquisition Cost) × 50% per item</p>
       </div>
 
       {/* Summary Cards */}
@@ -443,8 +445,9 @@ export default function SalesCommissionPage() {
                               </thead>
                               <tbody className="divide-y divide-blue-100">
                                 {sale.items.map((item, i) => {
+                                  const pct       = (sale.commission_percentage ?? 50) / 100;
                                   const acqCost   = Number(getAcqCost(sale.id, i, item.acquisition_cost)) || 0;
-                                  const unitComm  = (item.unit_price - acqCost) * 0.5;
+                                  const unitComm  = (item.unit_price - acqCost) * pct;
                                   const commAmt   = unitComm * item.quantity;
                                   return (
                                     <tr key={i}>
@@ -457,9 +460,11 @@ export default function SalesCommissionPage() {
                                           min="0"
                                           step="0.01"
                                           value={getAcqCost(sale.id, i, item.acquisition_cost)}
-                                          onChange={(e) => setAcqCost(sale.id, i, e.target.value)}
+                                          onChange={(e) => activeTab !== "collected" && setAcqCost(sale.id, i, e.target.value)}
+                                          readOnly={activeTab === "collected"}
                                           onClick={(e) => e.stopPropagation()}
                                           onBlur={(e) => {
+                                            if (activeTab === "collected") return;
                                             e.stopPropagation();
                                             const overrides = {};
                                             sale.items.forEach((_, idx) => {
@@ -482,7 +487,7 @@ export default function SalesCommissionPage() {
                                               );
                                             });
                                           }}
-                                          className="w-24 text-right border border-blue-300 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+                                          className={`w-24 text-right border rounded px-1.5 py-0.5 text-xs focus:outline-none ${activeTab === "collected" ? "border-gray-200 bg-gray-50 text-gray-500 cursor-default" : "border-blue-300 focus:ring-1 focus:ring-blue-400 bg-white"}`}
                                         />
                                       </td>
                                       <td className="py-1.5 text-right text-gray-600">₱{fmt(unitComm)}</td>
