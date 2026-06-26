@@ -554,12 +554,12 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               <StatusBadge status={sale.status} />
             </div>
             <div className="flex flex-col items-center gap-0.5">
-              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Payment</span>
-              <PaymentBadge status={sale.payment_status} />
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
               <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Delivery</span>
               <DeliveryBadge status={sale.delivery_status} />
+            </div>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Payment</span>
+              <PaymentBadge status={sale.payment_status} />
             </div>
             {hasPermission("edit_sales") && sale.status !== "cancelled" && (
               <button
@@ -1344,15 +1344,6 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                 )}
               </>
             )}
-            {sale.status === "confirmed" && sale.payment_status !== "paid" && (
-              <button
-                onClick={() => setShowPaymentForm(!showPaymentForm)}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
-              >
-                <CreditCard size={16} />
-                {showPaymentForm ? "Hide Payment" : "Record Payment"}
-              </button>
-            )}
             {sale.status === "confirmed" && sale.delivery_status !== "delivered" && (
               <button
                 onClick={() => { setShowPaymentForm(false); showDeliveryForm ? setShowDeliveryForm(false) : openDeliveryForm(); }}
@@ -1360,6 +1351,15 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
               >
                 <Truck size={16} />
                 {showDeliveryForm ? "Hide Delivery" : "Record Delivery"}
+              </button>
+            )}
+            {sale.status === "confirmed" && sale.payment_status !== "paid" && (
+              <button
+                onClick={() => setShowPaymentForm(!showPaymentForm)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
+              >
+                <CreditCard size={16} />
+                {showPaymentForm ? "Hide Payment" : "Record Payment"}
               </button>
             )}
             {sale.status === "confirmed" && hasPermission("cancel_sales") && (
@@ -1800,8 +1800,8 @@ export default function SalesPage() {
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Paid</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Balance</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Status</th>
-              <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Payment</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Delivery</th>
+              <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Payment</th>
               <th className="text-left px-4 py-4 text-sm font-semibold text-gray-600">Actions</th>
             </tr>
           </thead>
@@ -1882,10 +1882,10 @@ export default function SalesPage() {
                         <StatusBadge status={sale.status} />
                       </td>
                       <td className="px-4 py-3">
-                        <PaymentBadge status={sale.payment_status} />
+                        <DeliveryBadge status={sale.delivery_status} />
                       </td>
                       <td className="px-4 py-3">
-                        <DeliveryBadge status={sale.delivery_status} />
+                        <PaymentBadge status={sale.payment_status} />
                       </td>
                       <td className="px-4 py-3">
                         <button
