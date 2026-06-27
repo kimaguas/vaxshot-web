@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../api/axios";
 import {
@@ -65,6 +65,7 @@ const SalesReportTab = () => {
   const [params, setParams] = useState({ from, to });
   const [reportType, setReportType] = useState("sales");
   const [selectedSupplier, setSelectedSupplier] = useState("");
+  const [productSort, setProductSort] = useState({ key: null, dir: "desc" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["report-sales", params],
@@ -82,6 +83,27 @@ const SalesReportTab = () => {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  const sortedByProduct = useMemo(() => {
+    const rows = data?.by_product ?? [];
+    if (!productSort.key) return rows;
+    return [...rows].sort((a, b) => {
+      const va = Number(a[productSort.key]);
+      const vb = Number(b[productSort.key]);
+      return productSort.dir === "asc" ? va - vb : vb - va;
+    });
+  }, [data?.by_product, productSort]);
+
+  const toggleProductSort = (key) => {
+    setProductSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }
+    );
+  };
+
+  const sortIcon = (key) => {
+    if (productSort.key !== key) return " ↕";
+    return productSort.dir === "asc" ? " ↑" : " ↓";
+  };
 
   const exportSupplierReport = async (group) => {
     const ExcelJS = (await import("exceljs")).default;
@@ -355,16 +377,22 @@ const SalesReportTab = () => {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="text-left px-4 py-3 font-semibold text-gray-600">Product Code</th>
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600">Supplier</th>
                         <th className="text-left px-4 py-3 font-semibold text-gray-600">Product</th>
-                        <th className="text-right px-4 py-3 font-semibold text-gray-600">Total Qty Sold</th>
-                        <th className="text-right px-4 py-3 font-semibold text-gray-600">Total Amount</th>
+                        <th className="text-right px-4 py-3 font-semibold text-gray-600 cursor-pointer select-none hover:text-blue-600"
+                          onClick={() => toggleProductSort("total_quantity")}>
+                          Total Qty Sold{sortIcon("total_quantity")}
+                        </th>
+                        <th className="text-right px-4 py-3 font-semibold text-gray-600 cursor-pointer select-none hover:text-blue-600"
+                          onClick={() => toggleProductSort("total_amount")}>
+                          Total Amount{sortIcon("total_amount")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {data.by_product?.map((row, i) => (
+                      {sortedByProduct.map((row, i) => (
                         <tr key={i} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-500">{row.product_code || "-"}</td>
+                          <td className="px-4 py-3 text-gray-500">{row.supplier || "-"}</td>
                           <td className="px-4 py-3 font-medium text-gray-800">{row.product}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{Number(row.total_quantity).toLocaleString()}</td>
                           <td className="px-4 py-3 text-right font-medium text-blue-600">₱{Number(row.total_amount).toLocaleString()}</td>

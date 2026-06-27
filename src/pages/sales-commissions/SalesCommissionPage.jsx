@@ -276,11 +276,6 @@ export default function SalesCommissionPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Sales Commission</h1>
-      </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard label="Pending"     amount={summary.pending_total ?? 0}     count={summary.pending_count ?? 0}     color="yellow" />

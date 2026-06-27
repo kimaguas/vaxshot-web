@@ -17,6 +17,8 @@ const pageTitles = {
   "/users": "Users",
   "/activity-logs": "Activity Logs",
   "/area-codes": "Area Codes",
+  "/sales-commissions": "Sales Commission",
+  "/bids": "Bid Tracker",
 };
 
 export default function MainLayout() {

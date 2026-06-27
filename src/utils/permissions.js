@@ -93,6 +93,15 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    module: "Bid Management",
+    permissions: [
+      { name: "view_bids",   label: "View Bids" },
+      { name: "create_bids", label: "Create Bid" },
+      { name: "edit_bids",   label: "Edit Bid" },
+      { name: "delete_bids", label: "Delete Bid" },
+    ],
+  },
+  {
     module: "Area Codes",
     permissions: [
       { name: "view_area_codes",   label: "View Area Codes" },
@@ -137,6 +146,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_users", "create_users", "edit_users", "delete_users",
     "view_activity_logs",
     "view_sales_commissions", "collect_commission",
+    "view_bids", "create_bids", "edit_bids", "delete_bids",
     "manage_settings",
   ],
   manager: [
@@ -153,6 +163,7 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_reports",
     "view_area_codes", "create_area_codes", "edit_area_codes", "delete_area_codes",
     "view_sales_commissions", "collect_commission",
+    "view_bids", "create_bids", "edit_bids", "delete_bids",
   ],
   staff: [
     "view_dashboard",
@@ -167,8 +178,9 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_email_templates", "create_email_templates", "edit_email_templates",
     "view_reports",
     "view_area_codes", "create_area_codes", "edit_area_codes",
+    "view_bids", "create_bids", "edit_bids",
   ],
-  viewer: ["view_dashboard", "view_reports"],
+  viewer: ["view_dashboard", "view_reports", "view_bids"],
   sales_rep: [
     "view_dashboard",
     "view_products",
@@ -178,5 +190,6 @@ export const ROLE_PERMISSION_PRESETS = {
     "view_reports",
     "view_area_codes",
     "view_sales_commissions", "collect_commission",
+    "view_bids", "create_bids", "edit_bids",
   ],
 };
