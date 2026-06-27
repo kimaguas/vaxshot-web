@@ -297,7 +297,7 @@ function ImportModal({ onClose, onExtracted }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -479,7 +479,7 @@ function BidModal({ bid, onClose, onSave, isPending, onUploadAttachment, onDelet
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl my-6">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -766,7 +766,7 @@ function ViewModal({ bid, onClose, onEdit, onDelete, onStatusChange, hasPermissi
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl my-6">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -920,6 +920,9 @@ function ViewModal({ bid, onClose, onEdit, onDelete, onStatusChange, hasPermissi
 
 function KanbanCard({ bid, onClick }) {
   const ds = deadlineStatus(bid.bid_deadline);
+  const daysLeft = bid.bid_deadline
+    ? Math.ceil((new Date(bid.bid_deadline) - new Date()) / 86400000)
+    : null;
   return (
     <div onClick={onClick}
       className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md cursor-pointer transition-shadow space-y-2">
@@ -938,6 +941,21 @@ function KanbanCard({ bid, onClick }) {
           {ds === "overdue" && <AlertTriangle size={10} />}
           {ds === "soon"    && <Clock size={10} />}
           Deadline: {bid.bid_deadline_fmt ?? bid.bid_deadline}
+        </div>
+      )}
+      {daysLeft !== null && (
+        <div className={`flex items-center gap-1 text-xs font-semibold ${
+          daysLeft < 0  ? "text-red-600" :
+          daysLeft === 0 ? "text-red-500" :
+          daysLeft <= 3  ? "text-orange-600" :
+          daysLeft <= 7  ? "text-yellow-700" :
+          "text-gray-500"
+        }`}>
+          <AlertTriangle size={11} />
+          {daysLeft < 0
+            ? `${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? "s" : ""} overdue`
+            : daysLeft === 0 ? "Due today!"
+            : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`}
         </div>
       )}
       <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
@@ -1322,7 +1340,7 @@ export default function BidsPage() {
 
       {/* Delete confirm */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <h3 className="text-base font-semibold text-gray-900">Delete Bid</h3>
             <p className="text-sm text-gray-600">Are you sure you want to delete this bid? This cannot be undone.</p>

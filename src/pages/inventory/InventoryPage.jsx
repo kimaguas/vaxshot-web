@@ -166,7 +166,7 @@ const BatchModal = ({ product, onClose }) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <div className="p-5 border-b border-gray-200 flex justify-between items-center">
           <div>
@@ -272,7 +272,7 @@ const AdjustModal = ({ product, onClose, onSave, isSaving }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="p-5 border-b border-gray-200 flex justify-between items-center">
           <div>
