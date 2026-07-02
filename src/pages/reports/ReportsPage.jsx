@@ -1319,15 +1319,14 @@ function generateSOA(sale) {
   </div>
 
   <div class="note">
-    Please indicate the Invoice No. and SOA No. as reference for your payment.
-    Kindly send proof of payment to Kim Aguas (kimaguas.digitalsolutions@gmail.com) for prompt posting to your account.
+    Please indicate the Invoice No. as reference for your payment. Kindly send proof of payment for prompt posting to your account.
   </div>
 
   <div class="sigs">
     <div class="sig-block">
       <div class="sig-line"></div>
       <div class="sig-label">Prepared by</div>
-      <div class="sig-name">${sale.account_manager || "Kim Aguas"} — Account Manager</div>
+      <div class="sig-name">Kim Harold Aguas — Account Manager</div>
     </div>
     <div class="sig-block">
       <div class="sig-line"></div>
@@ -1482,14 +1481,13 @@ function generateCustomerSOA(sales) {
     </ul>
   </div>
   <div class="note">
-    Please indicate the Invoice No. and SOA No. as reference for your payment.
-    Kindly send proof of payment to Kim Aguas (kimaguas.digitalsolutions@gmail.com) for prompt posting to your account.
+    Please indicate the Invoice No. as reference for your payment. Kindly send proof of payment for prompt posting to your account.
   </div>
   <div class="sigs">
     <div class="sig-block">
       <div class="sig-line"></div>
       <div class="sig-label">Prepared by</div>
-      <div class="sig-name">${first.account_manager || "Kim Aguas"} — Account Manager</div>
+      <div class="sig-name">Kim Harold Aguas — Account Manager</div>
     </div>
     <div class="sig-block">
       <div class="sig-line"></div>
