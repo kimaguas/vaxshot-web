@@ -281,9 +281,9 @@ export default function SalesCommissionPage() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard label="Pending"     amount={summary.pending_total ?? 0}     count={summary.pending_count ?? 0}     salesTotal={summary.pending_sales_total ?? 0}     color="yellow" />
-        <SummaryCard label="For Release" amount={summary.for_release_total ?? 0} count={summary.for_release_count ?? 0} salesTotal={summary.for_release_sales_total ?? 0} color="blue" />
-        <SummaryCard label="Collected"   amount={summary.collected_total ?? 0}   count={summary.collected_count ?? 0}   salesTotal={summary.collected_sales_total ?? 0}   color="green" />
+        <SummaryCard label="Pending"     amount={summary.pending_total ?? 0}     count={summary.pending_count ?? 0}     salesTotal={summary.pending_sales_total ?? 0}     myCommTotal={isSalesRep() ? (summary.pending_total ?? 0) * myCommPct / 100 : null}     myCommPct={myCommPct} color="yellow" />
+        <SummaryCard label="For Release" amount={summary.for_release_total ?? 0} count={summary.for_release_count ?? 0} salesTotal={summary.for_release_sales_total ?? 0} myCommTotal={isSalesRep() ? (summary.for_release_total ?? 0) * myCommPct / 100 : null} myCommPct={myCommPct} color="blue" />
+        <SummaryCard label="Collected"   amount={summary.collected_total ?? 0}   count={summary.collected_count ?? 0}   salesTotal={summary.collected_sales_total ?? 0}   myCommTotal={isSalesRep() ? (summary.collected_total ?? 0) * myCommPct / 100 : null}   myCommPct={myCommPct} color="green" />
       </div>
 
       {/* Area Code Filter — hidden for sales reps (they're auto-scoped) */}
@@ -615,7 +615,7 @@ export default function SalesCommissionPage() {
   );
 }
 
-function SummaryCard({ label, amount, count, salesTotal, color }) {
+function SummaryCard({ label, amount, count, salesTotal, myCommTotal, myCommPct, color }) {
   const colors = {
     yellow: { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", badge: "bg-yellow-100 text-yellow-600" },
     blue:   { bg: "bg-blue-50",   border: "border-blue-200",   text: "text-blue-700",   badge: "bg-blue-100 text-blue-600" },
@@ -630,14 +630,23 @@ function SummaryCard({ label, amount, count, salesTotal, color }) {
         <span className={`text-sm font-medium ${c.text}`}>{label}</span>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.badge}`}>{count} sale{count !== 1 ? "s" : ""}</span>
       </div>
-      <div className={`flex items-center justify-between text-xs font-medium ${c.text} opacity-70 mb-1`}>
+      <div className={`flex items-center justify-between text-xs ${c.text} opacity-70 mb-1`}>
         <span>Total Sales</span>
         <span>{php(salesTotal)}</span>
       </div>
-      <div className={`flex items-center justify-between text-xs font-medium ${c.text} opacity-70 mb-1`}>
-        <span>Commission</span>
-        <span className={`text-base font-bold opacity-100`}>{php(amount)}</span>
+      <div className={`flex items-center justify-between text-xs ${c.text} opacity-70 mb-1`}>
+        <span>{myCommTotal !== null ? "Team Commission" : "Commission"}</span>
+        <span className="font-semibold">{php(amount)}</span>
       </div>
+      {myCommTotal !== null && (
+        <>
+          <div className={`border-t ${c.border} my-2`} />
+          <div className={`flex items-center justify-between text-xs ${c.text} opacity-70 mb-0.5`}>
+            <span>My Commission ({myCommPct}%)</span>
+          </div>
+          <p className={`text-xl font-bold ${c.text}`}>{php(myCommTotal)}</p>
+        </>
+      )}
     </div>
   );
 }
