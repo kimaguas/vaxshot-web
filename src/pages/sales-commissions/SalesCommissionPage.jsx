@@ -210,6 +210,8 @@ export default function SalesCommissionPage() {
   const [areaCodeFilter, setAreaCodeFilter] = useState("");
   const [expandedId, setExpandedId]       = useState(null);
   const [editedCosts, setEditedCosts]     = useState({});
+  const [savingId, setSavingId]           = useState(null);
+  const [savedId, setSavedId]             = useState(null);
   const [collectSale, setCollectSale]     = useState(null);
   const [notes, setNotes]                 = useState("");
   const [collectedDate, setCollectedDate] = useState("");
@@ -459,40 +461,54 @@ export default function SalesCommissionPage() {
                                       <td className="py-1.5 text-right text-gray-600">{item.quantity}</td>
                                       <td className="py-1.5 text-right text-gray-600">₱{fmt(item.unit_price)}</td>
                                       <td className="py-1.5 text-right text-gray-600">
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          step="0.01"
-                                          value={getAcqCost(sale.id, i, item.acquisition_cost)}
-                                          onChange={(e) => activeTab !== "collected" && setAcqCost(sale.id, i, e.target.value)}
-                                          readOnly={activeTab === "collected"}
-                                          onClick={(e) => e.stopPropagation()}
-                                          onBlur={(e) => {
-                                            if (activeTab === "collected") return;
-                                            e.stopPropagation();
-                                            const overrides = {};
-                                            sale.items.forEach((_, idx) => {
-                                              overrides[String(idx)] = Number(getAcqCost(sale.id, idx, sale.items[idx].acquisition_cost)) || 0;
-                                            });
-                                            const newAmount = calcSaleComm(sale);
-                                            api.patch(`/sale-commissions/${sale.id}/amount`, {
-                                              commission_amount: newAmount,
-                                              cost_overrides: overrides,
-                                            }).then(() => {
-                                              qc.setQueryData(['sale-commissions', activeTab], (old) =>
-                                                old ? {
-                                                  ...old,
-                                                  sales: old.sales.map((s) =>
-                                                    s.id === sale.id
-                                                      ? { ...s, commission_amount: newAmount, cost_overrides: overrides }
-                                                      : s
-                                                  ),
-                                                } : old
-                                              );
-                                            });
-                                          }}
-                                          className={`w-24 text-right border rounded px-1.5 py-0.5 text-xs focus:outline-none ${activeTab === "collected" ? "border-gray-200 bg-gray-50 text-gray-500 cursor-default" : "border-blue-300 focus:ring-1 focus:ring-blue-400 bg-white"}`}
-                                        />
+                                        <div className="flex items-center justify-end gap-1">
+                                          {savingId === `${sale.id}_${i}` && (
+                                            <span className="text-xs text-gray-400">Saving...</span>
+                                          )}
+                                          {savedId === `${sale.id}_${i}` && (
+                                            <span className="text-xs text-green-600 font-medium">✓ Saved</span>
+                                          )}
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={getAcqCost(sale.id, i, item.acquisition_cost)}
+                                            onChange={(e) => activeTab !== "collected" && setAcqCost(sale.id, i, e.target.value)}
+                                            readOnly={activeTab === "collected"}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onBlur={(e) => {
+                                              if (activeTab === "collected") return;
+                                              e.stopPropagation();
+                                              const itemKey = `${sale.id}_${i}`;
+                                              const overrides = {};
+                                              sale.items.forEach((_, idx) => {
+                                                overrides[String(idx)] = Number(getAcqCost(sale.id, idx, sale.items[idx].acquisition_cost)) || 0;
+                                              });
+                                              const newAmount = calcSaleComm(sale);
+                                              setSavingId(itemKey);
+                                              setSavedId(null);
+                                              api.patch(`/sale-commissions/${sale.id}/amount`, {
+                                                commission_amount: newAmount,
+                                                cost_overrides: overrides,
+                                              }).then(() => {
+                                                qc.setQueryData(['sale-commissions', activeTab, areaCodeFilter], (old) =>
+                                                  old ? {
+                                                    ...old,
+                                                    sales: old.sales.map((s) =>
+                                                      s.id === sale.id
+                                                        ? { ...s, commission_amount: newAmount, cost_overrides: overrides }
+                                                        : s
+                                                    ),
+                                                  } : old
+                                                );
+                                                setSavingId(null);
+                                                setSavedId(itemKey);
+                                                setTimeout(() => setSavedId(null), 2000);
+                                              }).catch(() => setSavingId(null));
+                                            }}
+                                            className={`w-24 text-right border rounded px-1.5 py-0.5 text-xs focus:outline-none ${activeTab === "collected" ? "border-gray-200 bg-gray-50 text-gray-500 cursor-default" : "border-blue-300 focus:ring-1 focus:ring-blue-400 bg-white"}`}
+                                          />
+                                        </div>
                                       </td>
                                       <td className="py-1.5 text-right text-gray-600">₱{fmt(unitComm)}</td>
                                       <td className="py-1.5 text-right font-semibold text-blue-700">₱{fmt(commAmt)}</td>
