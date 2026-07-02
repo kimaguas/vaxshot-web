@@ -14,8 +14,8 @@ import { FileText, Package, ShoppingCart, Users, Clock, CreditCard, Download } f
 import Pagination from "../../components/ui/Pagination";
 
 const tabs = [
-  { id: "sales", label: "Sales Report", icon: ShoppingCart },
   { id: "payments", label: "Payments Report", icon: CreditCard },
+  { id: "sales", label: "Sales Report", icon: ShoppingCart },
   { id: "inventory", label: "Inventory Report", icon: Package },
   { id: "purchase-orders", label: "Purchase Orders", icon: FileText },
   { id: "customers", label: "Customer Report", icon: Users },
@@ -1149,6 +1149,362 @@ const POReportTab = () => {
   );
 };
 
+// ─── SOA Generator ───────────────────────────────────────────────────────────
+
+function generateSOA(sale) {
+  const fmtPHP = (v) =>
+    "PHP " + Number(v ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 });
+
+  const today = new Date().toLocaleDateString("en-PH", {
+    year: "numeric", month: "long", day: "numeric",
+  });
+
+  const itemRows = sale.items?.length
+    ? sale.items.map((item) => `
+        <tr>
+          <td>${sale.po_number || "—"}</td>
+          <td>${sale.invoice_number || "—"}</td>
+          <td>${sale.delivery_date || "—"}</td>
+          <td>${item.product_name || "—"} ${item.quantity > 1 ? "x " + item.quantity : ""}</td>
+          <td>${sale.due_date || "—"}</td>
+          <td class="right">${fmtPHP(item.total_price)}</td>
+        </tr>`).join("")
+    : `<tr>
+        <td>${sale.po_number || "—"}</td>
+        <td>${sale.invoice_number || "—"}</td>
+        <td>${sale.delivery_date || "—"}</td>
+        <td>—</td>
+        <td>${sale.due_date || "—"}</td>
+        <td class="right">${fmtPHP(sale.total_amount)}</td>
+      </tr>`;
+
+  const totalAmt = sale.items?.length
+    ? sale.items.reduce((s, i) => s + Number(i.total_price), 0)
+    : Number(sale.total_amount);
+
+  const html = `<!DOCTYPE html><html><head>
+  <meta charset="utf-8">
+  <title>SOA — ${sale.soa_number ?? sale.invoice_number}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:28px 36px;background:#fff}
+
+    /* ── Letterhead ── */
+    .letterhead{display:flex;align-items:center;gap:16px;border-left:5px solid #2563eb;padding-left:14px;margin-bottom:6px}
+    .letterhead img{height:56px;width:auto}
+    .letterhead-text h1{font-size:14px;font-weight:bold;letter-spacing:.5px;color:#2563eb;text-transform:uppercase}
+    .letterhead-text p{font-size:9.5px;color:#555;margin-top:2px}
+    .divider{border:none;border-top:1.5px solid #2563eb;margin:10px 0}
+
+    /* ── Title ── */
+    .title-block{margin-bottom:14px}
+    .title-block h2{font-size:18px;font-weight:bold;color:#2563eb;letter-spacing:1px}
+    .title-block p{font-size:9.5px;color:#666;font-style:italic;margin-top:2px}
+
+    /* ── Bill To + Meta ── */
+    .info-row{display:flex;gap:0;margin-bottom:16px}
+    .bill-to{flex:1;border:1px solid #ccc;padding:10px 14px;border-radius:4px 0 0 4px;background:#fafafa}
+    .bill-to .label{font-size:8.5px;font-weight:bold;color:#2563eb;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+    .bill-to .name{font-size:12px;font-weight:bold;color:#111;margin-bottom:2px}
+    .bill-to .addr{font-size:9.5px;color:#444;line-height:1.5}
+    .meta{min-width:210px;border:1px solid #ccc;border-left:none;padding:10px 14px;border-radius:0 4px 4px 0;background:#f0fdfa}
+    .meta table{width:100%;border-collapse:collapse}
+    .meta td{padding:2px 0;font-size:9.5px}
+    .meta td.mk{font-weight:bold;color:#444;padding-right:8px;white-space:nowrap}
+    .meta td.mv{color:#111}
+
+    /* ── Orders Table ── */
+    .section-label{font-size:10px;font-weight:bold;color:#2563eb;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;border-bottom:1px solid #2563eb;padding-bottom:3px}
+    table.orders{width:100%;border-collapse:collapse;margin-bottom:16px}
+    table.orders thead tr{background:#2563eb;color:#fff}
+    table.orders th{padding:6px 10px;font-size:9.5px;font-weight:bold;text-align:left}
+    table.orders th.right,table.orders td.right{text-align:right}
+    table.orders td{padding:5px 10px;font-size:10px;border-bottom:1px solid #e5e7eb}
+    table.orders tbody tr:nth-child(even){background:#f0fdfa}
+    table.orders tr.total-row td{font-weight:bold;background:#2563eb;color:#fff;font-size:10.5px}
+    table.orders tr.total-row td.right{text-align:right;letter-spacing:.3px}
+
+    /* ── Payment ── */
+    .payment-section{margin-bottom:14px}
+    .payment-section h3{font-size:10px;font-weight:bold;margin-bottom:6px}
+    .payment-section ul{padding-left:16px;list-style:disc}
+    .payment-section li{margin-bottom:4px;font-size:9.5px;line-height:1.6}
+    .payment-section .bank-name{font-weight:bold}
+    .payment-section .bank-detail{margin-left:4px}
+
+    /* ── Note ── */
+    .note{font-size:8.5px;color:#555;font-style:italic;border-top:1px solid #e5e7eb;padding-top:8px;margin-bottom:14px;line-height:1.5}
+
+    /* ── Signatures ── */
+    .sigs{display:flex;gap:48px;margin-top:8px}
+    .sig-block{flex:1}
+    .sig-line{border-bottom:1px solid #333;height:36px}
+    .sig-label{font-size:9px;color:#555;margin-top:4px}
+    .sig-name{font-size:9.5px;font-weight:bold;color:#111}
+
+    @media print{
+      body{padding:0}
+      @page{size:A4 portrait;margin:15mm}
+    }
+  </style>
+</head><body>
+
+  <div class="letterhead">
+    <img src="${window.location.origin}/logo.png" onerror="this.style.display='none'" alt="logo">
+    <div class="letterhead-text">
+      <h1>Vaxshot Pharmaceutical Products Trading</h1>
+      <p>San Fernando, Pampanga, Philippines</p>
+    </div>
+  </div>
+  <hr class="divider">
+
+  <div class="title-block">
+    <h2>STATEMENT OF ACCOUNT</h2>
+    <p>Vaccine Orders — Billing Summary</p>
+  </div>
+
+  <div class="info-row">
+    <div class="bill-to">
+      <div class="label">Bill To</div>
+      <div class="name">${sale.customer || "—"}</div>
+      <div class="addr">${sale.customer_address || ""}</div>
+      <div class="addr" style="margin-top:3px">TIN: ${sale.customer_tin || "—"}</div>
+    </div>
+    <div class="meta">
+      <table>
+        <tr><td class="mk">SOA No.:</td><td class="mv">${sale.soa_number || "—"}</td></tr>
+        <tr><td class="mk">Statement Date:</td><td class="mv">${today}</td></tr>
+        <tr><td class="mk">Account Manager:</td><td class="mv">${sale.account_manager || "—"}</td></tr>
+        <tr><td class="mk">Terms:</td><td class="mv">Net30</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-label">Outstanding Vaccine Orders</div>
+  <table class="orders">
+    <thead>
+      <tr>
+        <th>PO No.</th>
+        <th>Invoice No.</th>
+        <th>Delivery Date</th>
+        <th>Vaccine / Product</th>
+        <th>Due Date</th>
+        <th class="right">Amount (PHP)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+      <tr class="total-row">
+        <td colspan="5" style="text-align:right;padding-right:12px">TOTAL AMOUNT DUE</td>
+        <td class="right">[${fmtPHP(totalAmt)}]</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="payment-section">
+    <h3>Payment Method:</h3>
+    <p style="font-size:9.5px;margin-bottom:4px">Payment may be made via:</p>
+    <ul>
+      <li>
+        <span class="bank-name">Bank Transfer</span><br>
+        <span class="bank-detail">Bank: <b>Metrobank</b></span><br>
+        <span class="bank-detail">Account Name: <b>Vaxshot Pharmaceutical Products Trading.,</b></span><br>
+        <span class="bank-detail">Account No.: <b>6953695061197</b></span>
+      </li>
+      <li style="margin-top:4px">
+        <span class="bank-name">Check Payment</span><br>
+        <span class="bank-detail">Payable to: <b>Vaxshot Pharmaceutical Products Trading</b></span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="note">
+    Please indicate the Invoice No. and SOA No. as reference for your payment.
+    Kindly send proof of payment to Kim Aguas (kimaguas.digitalsolutions@gmail.com) for prompt posting to your account.
+  </div>
+
+  <div class="sigs">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Prepared by</div>
+      <div class="sig-name">${sale.account_manager || "Kim Aguas"} — Account Manager</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Conforme / Received by (Client)</div>
+      <div class="sig-name">Signature over Printed Name / Date</div>
+    </div>
+  </div>
+
+  <script>window.onload=()=>{window.print()}<\/script>
+</body></html>`;
+
+  const win = window.open("", "_blank", "width=900,height=1100");
+  win.document.write(html);
+  win.document.close();
+}
+
+// ─── Customer SOA Generator ──────────────────────────────────────────────────
+
+function generateCustomerSOA(sales) {
+  if (!sales.length) return;
+
+  const first    = sales[0];
+  const fmtPHP   = (v) => "PHP " + Number(v ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2 });
+  const today    = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+  const soaNum   = "SOA-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
+  const totalBal = sales.reduce((sum, s) => sum + Number(s.balance), 0);
+
+  const rows = sales.flatMap((sale) => {
+    const items = sale.items?.length ? sale.items : [null];
+    return items.map((item, idx) => `
+      <tr>
+        <td>${idx === 0 ? (sale.po_number || "—") : ""}</td>
+        <td>${idx === 0 ? (sale.invoice_number || "—") : ""}</td>
+        <td>${sale.delivery_date || "—"}</td>
+        <td>${item ? (item.product_name + (item.quantity > 1 ? " x " + item.quantity : "")) : "—"}</td>
+        <td>${sale.due_date || "—"}</td>
+        <td class="right">${fmtPHP(item ? item.total_price : sale.balance)}</td>
+      </tr>`);
+  }).join("");
+
+  const html = `<!DOCTYPE html><html><head>
+  <meta charset="utf-8">
+  <title>Customer SOA — ${first.customer}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:28px 36px;background:#fff}
+    .letterhead{display:flex;align-items:center;gap:16px;border-left:5px solid #2563eb;padding-left:14px;margin-bottom:6px}
+    .letterhead img{height:56px;width:auto}
+    .letterhead-text h1{font-size:14px;font-weight:bold;letter-spacing:.5px;color:#2563eb;text-transform:uppercase}
+    .letterhead-text p{font-size:9.5px;color:#555;margin-top:2px}
+    .divider{border:none;border-top:1.5px solid #2563eb;margin:10px 0}
+    .title-block{margin-bottom:14px}
+    .title-block h2{font-size:18px;font-weight:bold;color:#2563eb;letter-spacing:1px}
+    .title-block p{font-size:9.5px;color:#666;font-style:italic;margin-top:2px}
+    .info-row{display:flex;gap:0;margin-bottom:16px}
+    .bill-to{flex:1;border:1px solid #ccc;padding:10px 14px;border-radius:4px 0 0 4px;background:#fafafa}
+    .bill-to .label{font-size:8.5px;font-weight:bold;color:#2563eb;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+    .bill-to .name{font-size:12px;font-weight:bold;color:#111;margin-bottom:2px}
+    .bill-to .addr{font-size:9.5px;color:#444;line-height:1.5}
+    .meta{min-width:210px;border:1px solid #ccc;border-left:none;padding:10px 14px;border-radius:0 4px 4px 0;background:#eff6ff}
+    .meta table{width:100%;border-collapse:collapse}
+    .meta td{padding:2px 0;font-size:9.5px}
+    .meta td.mk{font-weight:bold;color:#444;padding-right:8px;white-space:nowrap}
+    .meta td.mv{color:#111}
+    .section-label{font-size:10px;font-weight:bold;color:#2563eb;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;border-bottom:1px solid #2563eb;padding-bottom:3px}
+    table.orders{width:100%;border-collapse:collapse;margin-bottom:16px}
+    table.orders thead tr{background:#2563eb;color:#fff}
+    table.orders th{padding:6px 10px;font-size:9.5px;font-weight:bold;text-align:left}
+    table.orders th.right,table.orders td.right{text-align:right}
+    table.orders td{padding:5px 10px;font-size:10px;border-bottom:1px solid #e5e7eb}
+    table.orders tbody tr:nth-child(even){background:#eff6ff}
+    table.orders tr.total-row td{font-weight:bold;background:#2563eb;color:#fff;font-size:10.5px}
+    table.orders tr.total-row td.right{text-align:right;letter-spacing:.3px}
+    .payment-section{margin-bottom:14px}
+    .payment-section h3{font-size:10px;font-weight:bold;margin-bottom:6px}
+    .payment-section ul{padding-left:16px;list-style:disc}
+    .payment-section li{margin-bottom:4px;font-size:9.5px;line-height:1.6}
+    .payment-section .bank-name{font-weight:bold}
+    .payment-section .bank-detail{margin-left:4px}
+    .note{font-size:8.5px;color:#555;font-style:italic;border-top:1px solid #e5e7eb;padding-top:8px;margin-bottom:14px;line-height:1.5}
+    .sigs{display:flex;gap:48px;margin-top:8px}
+    .sig-block{flex:1}
+    .sig-line{border-bottom:1px solid #333;height:36px}
+    .sig-label{font-size:9px;color:#555;margin-top:4px}
+    .sig-name{font-size:9.5px;font-weight:bold;color:#111}
+    @media print{body{padding:0}@page{size:A4 portrait;margin:15mm}}
+  </style>
+</head><body>
+  <div class="letterhead">
+    <img src="${window.location.origin}/logo.png" onerror="this.style.display='none'" alt="logo">
+    <div class="letterhead-text">
+      <h1>Vaxshot Pharmaceutical Products Trading</h1>
+      <p>San Fernando, Pampanga, Philippines</p>
+    </div>
+  </div>
+  <hr class="divider">
+  <div class="title-block">
+    <h2>STATEMENT OF ACCOUNT</h2>
+    <p>Consolidated Billing Summary — All Outstanding Invoices</p>
+  </div>
+  <div class="info-row">
+    <div class="bill-to">
+      <div class="label">Bill To</div>
+      <div class="name">${first.customer || "—"}</div>
+      <div class="addr">${first.customer_address || ""}</div>
+      <div class="addr" style="margin-top:3px">TIN: ${first.customer_tin || "—"}</div>
+    </div>
+    <div class="meta">
+      <table>
+        <tr><td class="mk">SOA No.:</td><td class="mv">${soaNum}</td></tr>
+        <tr><td class="mk">Statement Date:</td><td class="mv">${today}</td></tr>
+        <tr><td class="mk">Account Manager:</td><td class="mv">${first.account_manager || "—"}</td></tr>
+        <tr><td class="mk">Terms:</td><td class="mv">Net30</td></tr>
+        <tr><td class="mk">Total Invoices:</td><td class="mv">${sales.length}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="section-label">Outstanding Vaccine Orders</div>
+  <table class="orders">
+    <thead>
+      <tr>
+        <th>PO No.</th>
+        <th>Invoice No.</th>
+        <th>Delivery Date</th>
+        <th>Vaccine / Product</th>
+        <th>Due Date</th>
+        <th class="right">Amount (PHP)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+      <tr class="total-row">
+        <td colspan="5" style="text-align:right;padding-right:12px">TOTAL AMOUNT DUE</td>
+        <td class="right">[${fmtPHP(totalBal)}]</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="payment-section">
+    <h3>Payment Method:</h3>
+    <p style="font-size:9.5px;margin-bottom:4px">Payment may be made via:</p>
+    <ul>
+      <li>
+        <span class="bank-name">Bank Transfer</span><br>
+        <span class="bank-detail">Bank: <b>Metrobank</b></span><br>
+        <span class="bank-detail">Account Name: <b>Vaxshot Pharmaceutical Products Trading.,</b></span><br>
+        <span class="bank-detail">Account No.: <b>6953695061197</b></span>
+      </li>
+      <li style="margin-top:4px">
+        <span class="bank-name">Check Payment</span><br>
+        <span class="bank-detail">Payable to: <b>Vaxshot Pharmaceutical Products Trading</b></span>
+      </li>
+    </ul>
+  </div>
+  <div class="note">
+    Please indicate the Invoice No. and SOA No. as reference for your payment.
+    Kindly send proof of payment to Kim Aguas (kimaguas.digitalsolutions@gmail.com) for prompt posting to your account.
+  </div>
+  <div class="sigs">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Prepared by</div>
+      <div class="sig-name">${first.account_manager || "Kim Aguas"} — Account Manager</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Conforme / Received by (Client)</div>
+      <div class="sig-name">Signature over Printed Name / Date</div>
+    </div>
+  </div>
+  <script>window.onload=()=>{window.print()}<\/script>
+</body></html>`;
+
+  const win = window.open("", "_blank", "width=900,height=1100");
+  win.document.write(html);
+  win.document.close();
+}
+
 // Payments Report Tab
 const PER_PAGE = 15;
 
@@ -1157,6 +1513,7 @@ const PaymentsReportTab = () => {
   const [paymentView, setPaymentView] = useState("unpaid"); // "unpaid" | "paid"
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [soaCustomer, setSoaCustomer] = useState("");
 
   // Reset to page 1 whenever filters change
   useEffect(() => { setPage(1); }, [aging, paymentView, search]);
@@ -1172,6 +1529,31 @@ const PaymentsReportTab = () => {
     },
   });
 
+  // All unpaid/partial sales regardless of aging — used for customer SOA selector
+  const { data: allUnpaidData } = useQuery({
+    queryKey: ["report-payments-all-unpaid"],
+    queryFn: async () => {
+      const response = await api.get("/reports/payments", { params: {} });
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const uniqueCustomers = useMemo(() => {
+    const seen = new Map();
+    (allUnpaidData?.sales || []).forEach((s) => {
+      if (s.customer && !seen.has(s.customer)) seen.set(s.customer, s);
+    });
+    return [...seen.values()].sort((a, b) => a.customer.localeCompare(b.customer));
+  }, [allUnpaidData]);
+
+  const customerSales = useMemo(() =>
+    soaCustomer
+      ? (allUnpaidData?.sales || []).filter((s) => s.customer === soaCustomer)
+      : [],
+    [soaCustomer, allUnpaidData]
+  );
+
   const agingFilters = [
     { value: "", label: "All Unpaid" },
     { value: "15", label: "> 15 Days" },
@@ -1186,6 +1568,40 @@ const PaymentsReportTab = () => {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Customer SOA Generator ── */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <FileText size={16} className="text-blue-600" />
+          <span className="text-sm font-semibold text-blue-800">Generate Customer SOA</span>
+        </div>
+        <select
+          value={soaCustomer}
+          onChange={(e) => setSoaCustomer(e.target.value)}
+          className="px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[220px]"
+        >
+          <option value="">— Select customer —</option>
+          {uniqueCustomers.map((c, i) => (
+            <option key={i} value={c.customer}>{c.customer}</option>
+          ))}
+        </select>
+        {soaCustomer && (
+          <>
+            <span className="text-xs text-blue-600 font-medium">
+              {customerSales.length} outstanding invoice{customerSales.length !== 1 ? "s" : ""}
+              {" · "}₱{Number(customerSales.reduce((s, x) => s + Number(x.balance), 0)).toLocaleString()} due
+            </span>
+            <button
+              onClick={() => generateCustomerSOA(customerSales)}
+              disabled={customerSales.length === 0}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              <FileText size={14} /> Generate SOA
+            </button>
+          </>
+        )}
+      </div>
+
       {/* Filters Row */}
       <div className="flex flex-wrap items-center gap-3">
         <input
@@ -1287,7 +1703,7 @@ const PaymentsReportTab = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
-                        Sale No
+                        PO No.
                       </th>
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
                         Invoice
@@ -1318,13 +1734,14 @@ const PaymentsReportTab = () => {
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">
                         Status
                       </th>
+                      <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {paginated.map((sale, i) => (
                       <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-blue-600">
-                          {sale.sale_number}
+                        <td className="px-4 py-3 text-gray-700">
+                          {sale.po_number || "—"}
                         </td>
                         <td className="px-4 py-3 text-gray-600">
                           {sale.invoice_number || "-"}
@@ -1377,6 +1794,15 @@ const PaymentsReportTab = () => {
                             {sale.payment_status}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); generateSOA(sale); }}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                            title="Generate Statement of Account"
+                          >
+                            <FileText size={12} /> SOA
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1400,7 +1826,7 @@ const PaymentsReportTab = () => {
 };
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState("sales");
+  const [activeTab, setActiveTab] = useState("payments");
 
   return (
     <div className="space-y-6">

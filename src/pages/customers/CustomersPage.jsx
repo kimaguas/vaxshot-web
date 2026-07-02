@@ -16,6 +16,7 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError, u
     city: customer?.city || "",
     province: customer?.province || "",
     contact_no: customer?.contact_no || "",
+    tin_no: customer?.tin_no || "",
     specialization: customer?.specialization || "",
     status: customer?.status || "active",
     area_code_id: customer?.area_code_id || "",
@@ -212,20 +213,36 @@ const CustomerModal = ({ customer, onClose, onSave, errors = {}, onClearError, u
               />
             </div>
 
-            {/* Specialization */}
+            {/* TIN No */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Specialization
+                TIN No
               </label>
               <input
                 type="text"
-                value={form.specialization}
+                value={form.tin_no}
                 onChange={(e) =>
-                  setForm({ ...form, specialization: e.target.value })
+                  setForm({ ...form, tin_no: e.target.value })
                 }
+                placeholder="e.g. 000-000-000-0000"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          {/* Specialization */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Specialization
+            </label>
+            <input
+              type="text"
+              value={form.specialization}
+              onChange={(e) =>
+                setForm({ ...form, specialization: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           {/* Area Code */}

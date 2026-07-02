@@ -77,6 +77,7 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
     area_code_id: "",
     sale_date: new Date().toISOString().split("T")[0],
     invoice_number: "",
+    po_number: "",
     payment_method: "cash",
     notes: "",
     items: [{ product_id: "", quantity: "", unit_price: "" }],
@@ -226,6 +227,20 @@ const CreateSaleModal = ({ onClose, onSave, isPending }) => {
                   setForm({ ...form, invoice_number: e.target.value })
                 }
                 placeholder="INV-2026-001"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                PO Number
+              </label>
+              <input
+                type="text"
+                value={form.po_number}
+                onChange={(e) =>
+                  setForm({ ...form, po_number: e.target.value })
+                }
+                placeholder="PO-2026-001"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -498,6 +513,7 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
 
   const [editForm, setEditForm] = useState({
     invoice_number: sale.invoice_number || "",
+    po_number:      sale.po_number      || "",
     or_number:      sale.or_number      || "",
     sale_date:      sale.sale_date      || "",
     payment_method: sale.payment_method || "cash",
@@ -593,6 +609,15 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
                     type="text"
                     value={editForm.invoice_number}
                     onChange={(e) => setEditForm({ ...editForm, invoice_number: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">PO Number</label>
+                  <input
+                    type="text"
+                    value={editForm.po_number}
+                    onChange={(e) => setEditForm({ ...editForm, po_number: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -741,6 +766,10 @@ const ViewSaleModal = ({ sale, onClose, onConfirm, onCancel, onPayment, onUpdate
             <div>
               <p className="text-gray-500">Invoice Number</p>
               <p className="font-medium">{sale.invoice_number || "-"}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">PO Number</p>
+              <p className="font-medium">{sale.po_number || "-"}</p>
             </div>
             <div>
               <p className="text-gray-500">OR Number</p>
