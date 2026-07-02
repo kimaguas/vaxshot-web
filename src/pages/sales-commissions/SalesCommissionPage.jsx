@@ -203,7 +203,7 @@ function printCommission(sale, editedCosts = {}, blank = false) {
 }
 
 export default function SalesCommissionPage() {
-  const { hasPermission, isSalesRep } = useAuth();
+  const { hasPermission, isSalesRep, user: authUser } = useAuth();
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab]         = useState("pending");
@@ -273,8 +273,9 @@ export default function SalesCommissionPage() {
     return c[tab.color] ?? "border-blue-500 text-blue-600";
   };
 
-  // Always 9 columns: toggle + sale# + customer + sale date + delivery date + payment + total + commission + action
-  const colSpan = activeTab === "collected" ? 10 : 9;
+  const myCommPct = isSalesRep() ? Number(authUser?.sales_rep_commission ?? 0) : 0;
+  // toggle + sale# + customer + sale date + delivery date + payment + total + commission [+ my commission] [+ collected on] + action
+  const colSpan = (activeTab === "collected" ? 10 : 9) + (isSalesRep() ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -344,7 +345,12 @@ export default function SalesCommissionPage() {
                   <th className="px-4 py-3 text-left">Delivery Date</th>
                   <th className="px-4 py-3 text-left">Payment</th>
                   <th className="px-4 py-3 text-right">Total Amount</th>
-                  <th className="px-4 py-3 text-right">Commission</th>
+                  <th className="px-4 py-3 text-right">{isSalesRep() ? "Team Commission" : "Commission"}</th>
+                  {isSalesRep() && (
+                    <th className="px-4 py-3 text-right text-orange-700">
+                      My Commission ({myCommPct}%)
+                    </th>
+                  )}
                   {activeTab === "collected" && (
                     <th className="px-4 py-3 text-left">Collected On</th>
                   )}
@@ -392,6 +398,11 @@ export default function SalesCommissionPage() {
                       </td>
                       <td className="px-4 py-3 text-right text-gray-800">₱{fmt(sale.total_amount)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-blue-700">₱{fmt(sale.commission_amount)}</td>
+                      {isSalesRep() && (
+                        <td className="px-4 py-3 text-right font-semibold text-orange-600">
+                          ₱{fmt(Number(sale.commission_amount) * myCommPct / 100)}
+                        </td>
+                      )}
                       {activeTab === "collected" && (
                         <td className="px-4 py-3 text-xs text-gray-600">
                           <div>{sale.collected_at}</div>
@@ -462,10 +473,10 @@ export default function SalesCommissionPage() {
                                       <td className="py-1.5 text-right text-gray-600">₱{fmt(item.unit_price)}</td>
                                       <td className="py-1.5 text-right text-gray-600">
                                         <div className="flex items-center justify-end gap-1">
-                                          {savingId === `${sale.id}_${i}` && (
+                                          {!isSalesRep() && savingId === `${sale.id}_${i}` && (
                                             <span className="text-xs text-gray-400">Saving...</span>
                                           )}
-                                          {savedId === `${sale.id}_${i}` && (
+                                          {!isSalesRep() && savedId === `${sale.id}_${i}` && (
                                             <span className="text-xs text-green-600 font-medium">✓ Saved</span>
                                           )}
                                           <input
@@ -473,11 +484,11 @@ export default function SalesCommissionPage() {
                                             min="0"
                                             step="0.01"
                                             value={getAcqCost(sale.id, i, item.acquisition_cost)}
-                                            onChange={(e) => activeTab !== "collected" && setAcqCost(sale.id, i, e.target.value)}
-                                            readOnly={activeTab === "collected"}
+                                            onChange={(e) => activeTab !== "collected" && !isSalesRep() && setAcqCost(sale.id, i, e.target.value)}
+                                            readOnly={activeTab === "collected" || isSalesRep()}
                                             onClick={(e) => e.stopPropagation()}
                                             onBlur={(e) => {
-                                              if (activeTab === "collected") return;
+                                              if (activeTab === "collected" || isSalesRep()) return;
                                               e.stopPropagation();
                                               const itemKey = `${sale.id}_${i}`;
                                               const overrides = {};
@@ -506,7 +517,7 @@ export default function SalesCommissionPage() {
                                                 setTimeout(() => setSavedId(null), 2000);
                                               }).catch(() => setSavingId(null));
                                             }}
-                                            className={`w-24 text-right border rounded px-1.5 py-0.5 text-xs focus:outline-none ${activeTab === "collected" ? "border-gray-200 bg-gray-50 text-gray-500 cursor-default" : "border-blue-300 focus:ring-1 focus:ring-blue-400 bg-white"}`}
+                                            className={`w-24 text-right border rounded px-1.5 py-0.5 text-xs focus:outline-none ${activeTab === "collected" || isSalesRep() ? "border-gray-200 bg-gray-50 text-gray-500 cursor-default" : "border-blue-300 focus:ring-1 focus:ring-blue-400 bg-white"}`}
                                           />
                                         </div>
                                       </td>

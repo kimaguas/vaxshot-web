@@ -30,6 +30,7 @@ const UserModal = ({ user, onClose, onSave, areaCodes }) => {
       ? [...user.permissions]
       : [...(ROLE_PERMISSION_PRESETS["staff"] || [])],
     area_code_id:          user?.area_code_id || "",
+    sales_rep_commission:  user?.sales_rep_commission ?? "",
   });
 
   const handleRoleChange = (newRole) => {
@@ -172,28 +173,48 @@ const UserModal = ({ user, onClose, onSave, areaCodes }) => {
               </p>
             </div>
 
-            {/* Area Code — only for Sales Rep */}
+            {/* Area Code & Commission — only for Sales Rep */}
             {form.role === "sales_rep" && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Area Code *
-                </label>
-                <select
-                  value={form.area_code_id}
-                  onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select area code</option>
-                  {areaCodes.map((ac) => (
-                    <option key={ac.id} value={ac.id}>
-                      {ac.code} — {ac.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-400 mt-1">
-                  Sales Rep will only see sales from customers in this area.
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Area Code *
+                  </label>
+                  <select
+                    value={form.area_code_id}
+                    onChange={(e) => setForm({ ...form, area_code_id: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select area code</option>
+                    {areaCodes.map((ac) => (
+                      <option key={ac.id} value={ac.id}>
+                        {ac.code} — {ac.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Sales Rep will only see sales from customers in this area.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sales Rep Commission (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.sales_rep_commission}
+                    onChange={(e) => setForm({ ...form, sales_rep_commission: e.target.value })}
+                    placeholder="e.g. 50"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Percentage of the sale commission earned by the rep.
+                  </p>
+                </div>
               </div>
             )}
 
